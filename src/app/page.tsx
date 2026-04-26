@@ -84,6 +84,23 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/compare"
+                  className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-stone-50 transition hover:bg-stone-800"
+                >
+                  Start v1 upload flow
+                </Link>
+                <a
+                  href="https://github.com/gbariana2/MirrorMe"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-stone-900/10 px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
+                >
+                  View repo
+                </a>
+              </div>
             </div>
 
             <div className="rounded-[1.75rem] bg-stone-950 p-6 text-stone-100">
@@ -180,3 +197,4 @@ export default function Home() {
     </main>
   );
 }
+import Link from "next/link";

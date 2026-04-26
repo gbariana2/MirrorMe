@@ -63,12 +63,15 @@ SUPABASE_SERVICE_ROLE_KEY=...
 Current status:
 
 - The app is wired for the public Supabase client.
-- The service role key is still needed before server-side setup can create
-  tables, buckets, or write privileged data flows.
+- The initial database schema lives in `supabase/migrations/`.
+- The `compare` flow uploads paired videos, stores records in Supabase, and creates
+  an `analysis` review page.
+- The service role key should live in `.env.local` locally and in Vercel's
+  server environment variables for deployment.
 
 ## Near-Term Build Priorities
 
-1. Define the upload and review data model.
-2. Add the first comparison pipeline with sample data and placeholder outputs.
-3. Integrate MediaPipe pose extraction.
-4. Persist reference videos, submissions, and reports.
+1. Add frame sampling and pose extraction for uploaded videos.
+2. Populate `analysis_frames` and `analysis_issues`.
+3. Render review overlays and real timestamped feedback.
+4. Improve storage and processing ergonomics for repeated use.
