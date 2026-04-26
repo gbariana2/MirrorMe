@@ -50,6 +50,22 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+## Supabase Setup
+
+Create a local `.env.local` file with:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+Current status:
+
+- The app is wired for the public Supabase client.
+- The service role key is still needed before server-side setup can create
+  tables, buckets, or write privileged data flows.
+
 ## Near-Term Build Priorities
 
 1. Define the upload and review data model.
