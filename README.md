@@ -66,6 +66,8 @@ Current status:
 - The initial database schema lives in `supabase/migrations/`.
 - The `compare` flow uploads paired videos, stores records in Supabase, and creates
   an `analysis` review page.
+- The review page can now run a client-side MediaPipe pose pass, store sampled
+  frames and issues, and update the analysis score and summary.
 - The service role key should live in `.env.local` locally and in Vercel's
   server environment variables for deployment.
 

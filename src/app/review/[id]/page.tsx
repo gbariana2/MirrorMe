@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PoseAnalysisPanel } from "@/components/pose-analysis-panel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type ReviewPageProps = {
@@ -187,6 +188,13 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
             )}
           </aside>
         </section>
+
+        <PoseAnalysisPanel
+          analysisId={analysis.id}
+          referenceVideoUrl={reference?.file_url ?? null}
+          submissionVideoUrl={submission?.file_url ?? null}
+          existingIssueCount={issues.length}
+        />
 
         <section className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(59,38,16,0.08)] backdrop-blur sm:p-8">
           <div className="mb-6">
