@@ -8,7 +8,7 @@ import {
   type NormalizedLandmark,
 } from "@mediapipe/tasks-vision";
 
-import { comparePoseFrames, scorePoseComparison, type PoseFrame } from "@/lib/pose";
+import { comparePoseFrames, type PoseFrame } from "@/lib/pose";
 
 const SAMPLE_INTERVAL_MS = 1000;
 const MAX_ANALYSIS_DURATION_MS = 10000;
@@ -210,12 +210,11 @@ export function PoseAnalysisPanel({
         previewCanvas,
       );
 
-      const issues = comparePoseFrames(referenceResult.frames, submissionResult.frames);
-      const overallScore = scorePoseComparison(issues);
+      const comparison = comparePoseFrames(referenceResult.frames, submissionResult.frames);
       const nextSummary =
-        issues.length === 0
-          ? "No major angle mismatches were flagged in the sampled frames."
-          : `MirrorMe sampled ${Math.min(referenceResult.frames.length, submissionResult.frames.length)} frames and flagged ${issues.length} issue${issues.length === 1 ? "" : "s"} across the tracked joints.`;
+        comparison.issues.length === 0
+          ? `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset and did not flag any major joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.`
+          : `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.`;
 
       const response = await fetch(`/api/analyses/${analysisId}/process`, {
         method: "POST",
@@ -225,8 +224,8 @@ export function PoseAnalysisPanel({
         body: JSON.stringify({
           referenceFrames: referenceResult.frames,
           submissionFrames: submissionResult.frames,
-          issues,
-          overallScore,
+          issues: comparison.issues,
+          overallScore: comparison.overallScore,
           summary: nextSummary,
         }),
       });
@@ -244,7 +243,7 @@ export function PoseAnalysisPanel({
       }));
 
       setPreviews(mergedPreviews);
-      setIssueCount(issues.length);
+      setIssueCount(comparison.issues.length);
       setScore(payload.overallScore);
       setSummary(payload.summary);
     } catch (caughtError) {

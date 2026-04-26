@@ -35,6 +35,14 @@ export type PoseIssue = {
   notes: string;
 };
 
+export type PoseComparisonResult = {
+  issues: PoseIssue[];
+  overallScore: number;
+  alignmentOffsetMs: number;
+  alignedFrameCount: number;
+  averageDelta: number;
+};
+
 const JOINT_DEFINITIONS = [
   {
     jointName: "left_elbow",
@@ -43,6 +51,7 @@ const JOINT_DEFINITIONS = [
       POSE_LANDMARK_NAMES.leftElbow,
       POSE_LANDMARK_NAMES.leftWrist,
     ],
+    weight: 1,
   },
   {
     jointName: "right_elbow",
@@ -51,6 +60,7 @@ const JOINT_DEFINITIONS = [
       POSE_LANDMARK_NAMES.rightElbow,
       POSE_LANDMARK_NAMES.rightWrist,
     ],
+    weight: 1,
   },
   {
     jointName: "left_shoulder",
@@ -59,6 +69,7 @@ const JOINT_DEFINITIONS = [
       POSE_LANDMARK_NAMES.leftShoulder,
       POSE_LANDMARK_NAMES.leftElbow,
     ],
+    weight: 1.2,
   },
   {
     jointName: "right_shoulder",
@@ -67,6 +78,7 @@ const JOINT_DEFINITIONS = [
       POSE_LANDMARK_NAMES.rightShoulder,
       POSE_LANDMARK_NAMES.rightElbow,
     ],
+    weight: 1.2,
   },
   {
     jointName: "left_knee",
@@ -75,6 +87,7 @@ const JOINT_DEFINITIONS = [
       POSE_LANDMARK_NAMES.leftKnee,
       POSE_LANDMARK_NAMES.leftAnkle,
     ],
+    weight: 1.1,
   },
   {
     jointName: "right_knee",
@@ -83,8 +96,14 @@ const JOINT_DEFINITIONS = [
       POSE_LANDMARK_NAMES.rightKnee,
       POSE_LANDMARK_NAMES.rightAnkle,
     ],
+    weight: 1.1,
   },
 ];
+
+const OFFSET_CANDIDATES_MS = [-2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000];
+const MATCH_TOLERANCE_MS = 600;
+const MINOR_THRESHOLD = 15;
+const MAJOR_THRESHOLD = 30;
 
 function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
@@ -130,12 +149,107 @@ function getJointAngle(landmarks: PosePoint[], pointIndexes: readonly number[]) 
   return getAngle(first, middle, last);
 }
 
-export function comparePoseFrames(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[]) {
-  const issues: PoseIssue[] = [];
+function getClosestFrame(targetTimestampMs: number, frames: PoseFrame[]) {
+  let closestFrame: PoseFrame | null = null;
+  let smallestDistance = Number.POSITIVE_INFINITY;
+
+  for (const frame of frames) {
+    const distance = Math.abs(frame.timestampMs - targetTimestampMs);
+
+    if (distance < smallestDistance) {
+      smallestDistance = distance;
+      closestFrame = frame;
+    }
+  }
+
+  if (smallestDistance > MATCH_TOLERANCE_MS) {
+    return null;
+  }
+
+  return closestFrame;
+}
+
+function evaluateOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[], offsetMs: number) {
+  let alignedFrameCount = 0;
+  let weightedDeltaSum = 0;
+  let weightedJointCount = 0;
 
   for (const referenceFrame of referenceFrames) {
-    const submissionFrame = submissionFrames.find(
-      (frame) => frame.timestampMs === referenceFrame.timestampMs,
+    const submissionFrame = getClosestFrame(referenceFrame.timestampMs + offsetMs, submissionFrames);
+
+    if (!submissionFrame) {
+      continue;
+    }
+
+    let comparableJointCount = 0;
+
+    for (const definition of JOINT_DEFINITIONS) {
+      const expectedAngle = getJointAngle(referenceFrame.landmarks, definition.points);
+      const actualAngle = getJointAngle(submissionFrame.landmarks, definition.points);
+
+      if (expectedAngle === null || actualAngle === null) {
+        continue;
+      }
+
+      comparableJointCount += 1;
+      weightedJointCount += definition.weight;
+      weightedDeltaSum += Math.abs(expectedAngle - actualAngle) * definition.weight;
+    }
+
+    if (comparableJointCount > 0) {
+      alignedFrameCount += 1;
+    }
+  }
+
+  const averageDelta =
+    weightedJointCount === 0 ? Number.POSITIVE_INFINITY : weightedDeltaSum / weightedJointCount;
+
+  return {
+    offsetMs,
+    alignedFrameCount,
+    averageDelta,
+  };
+}
+
+function getBestAlignmentOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[]) {
+  let bestCandidate = {
+    offsetMs: 0,
+    alignedFrameCount: 0,
+    averageDelta: Number.POSITIVE_INFINITY,
+  };
+
+  for (const offsetMs of OFFSET_CANDIDATES_MS) {
+    const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
+
+    if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
+      bestCandidate = candidate;
+      continue;
+    }
+
+    if (
+      candidate.alignedFrameCount === bestCandidate.alignedFrameCount &&
+      candidate.averageDelta < bestCandidate.averageDelta
+    ) {
+      bestCandidate = candidate;
+    }
+  }
+
+  return bestCandidate;
+}
+
+export function comparePoseFrames(
+  referenceFrames: PoseFrame[],
+  submissionFrames: PoseFrame[],
+): PoseComparisonResult {
+  const alignment = getBestAlignmentOffset(referenceFrames, submissionFrames);
+  const issues: PoseIssue[] = [];
+  let weightedDeltaSum = 0;
+  let weightedJointCount = 0;
+
+  for (const referenceFrame of referenceFrames) {
+    const submissionFrame = getClosestFrame(
+      referenceFrame.timestampMs + alignment.offsetMs,
+      submissionFrames,
     );
 
     if (!submissionFrame) {
@@ -151,33 +265,49 @@ export function comparePoseFrames(referenceFrames: PoseFrame[], submissionFrames
       }
 
       const delta = Math.abs(expectedAngle - actualAngle);
+      weightedJointCount += definition.weight;
+      weightedDeltaSum += delta * definition.weight;
 
-      if (delta < 15) {
+      if (delta < MINOR_THRESHOLD) {
         continue;
       }
 
       issues.push({
         timestampMs: referenceFrame.timestampMs,
         jointName: definition.jointName,
-        severity: delta >= 30 ? "major" : "minor",
+        severity: delta >= MAJOR_THRESHOLD ? "major" : "minor",
         expectedAngle: roundToTwoDecimals(expectedAngle),
         actualAngle: roundToTwoDecimals(actualAngle),
         delta: roundToTwoDecimals(delta),
         notes:
-          delta >= 30
-            ? "Joint angle diverges substantially from the reference."
-            : "Joint angle is drifting outside the target range.",
+          delta >= MAJOR_THRESHOLD
+            ? "Joint angle diverges substantially from the aligned reference frame."
+            : "Joint angle is drifting outside the target range after alignment.",
       });
     }
   }
 
-  return issues;
-}
+  const averageDelta =
+    weightedJointCount === 0 ? 0 : roundToTwoDecimals(weightedDeltaSum / weightedJointCount);
 
-export function scorePoseComparison(issues: PoseIssue[]) {
-  const penalty = issues.reduce((sum, issue) => {
-    return sum + (issue.severity === "major" ? 12 : 5);
+  const issuePenalty = issues.reduce((sum, issue) => {
+    return sum + (issue.severity === "major" ? 6 : 2.5);
   }, 0);
+  const deltaPenalty = averageDelta * 1.35;
+  const coveragePenalty =
+    alignment.alignedFrameCount === 0
+      ? 35
+      : Math.max(0, referenceFrames.length - alignment.alignedFrameCount) * 2.5;
+  const overallScore = Math.max(
+    0,
+    roundToTwoDecimals(100 - deltaPenalty - issuePenalty - coveragePenalty),
+  );
 
-  return Math.max(0, roundToTwoDecimals(100 - penalty));
+  return {
+    issues,
+    overallScore,
+    alignmentOffsetMs: alignment.offsetMs,
+    alignedFrameCount: alignment.alignedFrameCount,
+    averageDelta,
+  };
 }
