@@ -54,6 +54,20 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Dancer is not a team member." }, { status: 403 });
     }
 
+    const { data: target, error: targetError } = await supabase
+      .from("assignment_targets")
+      .select("id")
+      .eq("assignment_id", assignment.id)
+      .eq("dancer_user_id", dancerUserId)
+      .maybeSingle();
+
+    if (targetError) {
+      throw targetError;
+    }
+    if (!target) {
+      return NextResponse.json({ error: "You are not assigned to this assignment." }, { status: 403 });
+    }
+
     const { data: analysis, error: analysisError } = await supabase
       .from("analyses")
       .insert({

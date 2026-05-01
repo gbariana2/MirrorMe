@@ -125,7 +125,8 @@ Core endpoints:
 
 1. `POST /api/teams` create a team as captain.
 2. `POST /api/teams/:id/members` join a team with join code.
-3. `POST /api/teams/:id/assignments` create assignment (captain role required).
+3. `POST /api/teams/:id/assignments` create assignment (captain role required) and
+   assign specific dancers on the team.
 4. `POST /api/assignments/:id/submit` submit dancer recording before deadline.
 
 ## Near-Term Build Priorities

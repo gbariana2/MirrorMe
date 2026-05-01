@@ -15,6 +15,44 @@ type JoinPayload = {
   joinCode: string;
 };
 
+export async function GET(_request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const userId = await getRequiredUserId();
+    const supabase = createServerSupabaseClient();
+
+    const { data: requester, error: requesterError } = await supabase
+      .from("team_memberships")
+      .select("id")
+      .eq("team_id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (requesterError) {
+      throw requesterError;
+    }
+    if (!requester) {
+      return NextResponse.json({ error: "Team membership required." }, { status: 403 });
+    }
+
+    const { data, error } = await supabase
+      .from("team_memberships")
+      .select("user_id, role, created_at")
+      .eq("team_id", id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({ members: data ?? [] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load members.";
+    const status = error instanceof HttpError ? error.status : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;

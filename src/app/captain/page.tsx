@@ -19,12 +19,20 @@ type Assignment = {
   due_at: string;
   reference_video_id: string;
   created_at: string;
+  assignee_count?: number;
+};
+
+type TeamMember = {
+  user_id: string;
+  role: "captain" | "dancer";
+  created_at: string;
 };
 
 export default function CaptainPage() {
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [teamName, setTeamName] = useState("");
@@ -32,6 +40,7 @@ export default function CaptainPage() {
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
   const captainTeams = useMemo(() => teams.filter((item) => item.role === "captain"), [teams]);
 
@@ -60,6 +69,16 @@ export default function CaptainPage() {
     setAssignments(payload.assignments ?? []);
   }
 
+  async function loadMembers(teamId: string) {
+    const response = await fetch(`/api/teams/${teamId}/members`);
+    const payload = (await response.json()) as { members?: TeamMember[]; error?: string };
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Failed to load members.");
+    }
+    const dancers = (payload.members ?? []).filter((member) => member.role === "dancer");
+    setMembers(dancers);
+  }
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTeams().catch((caughtError) => {
@@ -76,6 +95,9 @@ export default function CaptainPage() {
     }
     loadAssignments(selectedTeamId).catch((caughtError) => {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load assignments.");
+    });
+    loadMembers(selectedTeamId).catch((caughtError) => {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to load members.");
     });
   }, [selectedTeamId]);
 
@@ -131,6 +153,7 @@ export default function CaptainPage() {
         referenceVideoId: uploadPayload.videoId,
         dueAt,
         instructions,
+        assigneeUserIds: selectedAssignees,
       }),
     });
     const payload = (await response.json()) as { error?: string };
@@ -142,6 +165,7 @@ export default function CaptainPage() {
     setReferenceFile(null);
     setDueAt("");
     setInstructions("");
+    setSelectedAssignees([]);
     await loadAssignments(selectedTeamId);
   }
 
@@ -214,6 +238,27 @@ export default function CaptainPage() {
               placeholder="Optional instructions"
               className="min-h-24 rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
+            <div className="rounded-xl border border-white/20 bg-[#121527] p-3">
+              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-300">Assign dancers</p>
+              <div className="grid gap-2">
+                {members.map((member) => (
+                  <label key={member.user_id} className="flex items-center gap-2 text-xs text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedAssignees.includes(member.user_id)}
+                      onChange={(event) => {
+                        setSelectedAssignees((current) =>
+                          event.target.checked
+                            ? [...current, member.user_id]
+                            : current.filter((value) => value !== member.user_id),
+                        );
+                      }}
+                    />
+                    <span>{member.user_id}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <button
               type="submit"
               className="rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950"
@@ -230,6 +275,9 @@ export default function CaptainPage() {
                   Due: {new Date(assignment.due_at).toLocaleString()}
                 </p>
                 <p className="mt-1 text-xs text-slate-300">Reference video: {assignment.reference_video_id}</p>
+                {typeof assignment.assignee_count === "number" ? (
+                  <p className="mt-1 text-xs text-slate-300">Assignees: {assignment.assignee_count}</p>
+                ) : null}
               </article>
             ))}
           </div>

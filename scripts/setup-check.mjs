@@ -29,6 +29,7 @@ function run() {
   checkFile("supabase/migrations/20260425193000_initial_schema.sql");
   checkFile("supabase/migrations/20260501183000_analysis_jobs.sql");
   checkFile("supabase/migrations/20260501203000_team_mode_foundation.sql");
+  checkFile("supabase/migrations/20260501223000_assignment_targets.sql");
 
   const envExample = fs.readFileSync(path.join(ROOT, ".env.example"), "utf8");
   for (const key of REQUIRED_ENV) {
