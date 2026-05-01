@@ -5,6 +5,12 @@ import { persistAnalysisResult } from "@/lib/analysis-persistence";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function isAuthorized(request: Request) {
+  const vercelCronHeader = request.headers.get("x-vercel-cron");
+
+  if (vercelCronHeader === "1") {
+    return true;
+  }
+
   const expectedSecret = process.env.ANALYSIS_JOB_SECRET;
 
   if (!expectedSecret) {
@@ -21,77 +27,102 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServerSupabaseClient();
+  const url = new URL(request.url);
+  const parsedLimit = Number(url.searchParams.get("limit") ?? "1");
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(20, Math.max(1, Math.floor(parsedLimit)))
+    : 1;
 
   try {
-    const { data: queuedJob, error: queuedJobError } = await supabase
+    const { data: queuedJobs, error: queuedJobError } = await supabase
       .from("analysis_jobs")
       .select("id, analysis_id, payload")
       .eq("status", "queued")
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(limit);
 
     if (queuedJobError) {
       throw queuedJobError;
     }
 
-    if (!queuedJob) {
-      return NextResponse.json({ processed: false, reason: "No queued jobs." });
+    if (!queuedJobs || queuedJobs.length === 0) {
+      return NextResponse.json({ processed: false, reason: "No queued jobs.", count: 0 });
     }
 
-    const { data: claimedRows, error: claimError } = await supabase
-      .from("analysis_jobs")
-      .update({
-        status: "processing",
-        started_at: new Date().toISOString(),
-      })
-      .eq("id", queuedJob.id)
-      .eq("status", "queued")
-      .select("id");
+    let processedCount = 0;
+    const failedJobs: Array<{ jobId: string; error: string }> = [];
 
-    if (claimError) {
-      throw claimError;
-    }
-
-    if (!claimedRows || claimedRows.length === 0) {
-      return NextResponse.json({
-        processed: false,
-        reason: "Job was already claimed.",
-      });
-    }
-
-    const payload = parseProcessPayload(queuedJob.payload);
-    const result = await persistAnalysisResult(supabase, queuedJob.analysis_id, payload);
-
-    if (!result.ok) {
-      await supabase
+    for (const queuedJob of queuedJobs) {
+      const { data: claimedRows, error: claimError } = await supabase
         .from("analysis_jobs")
         .update({
-          status: "failed",
-          error_message: result.message,
-          completed_at: new Date().toISOString(),
+          status: "processing",
+          started_at: new Date().toISOString(),
         })
-        .eq("id", queuedJob.id);
+        .eq("id", queuedJob.id)
+        .eq("status", "queued")
+        .select("id");
 
-      return NextResponse.json(
-        { processed: false, jobId: queuedJob.id, error: result.message },
-        { status: result.status },
-      );
+      if (claimError) {
+        throw claimError;
+      }
+
+      if (!claimedRows || claimedRows.length === 0) {
+        continue;
+      }
+
+      try {
+        const payload = parseProcessPayload(queuedJob.payload);
+        const result = await persistAnalysisResult(supabase, queuedJob.analysis_id, payload);
+
+        if (!result.ok) {
+          await supabase
+            .from("analysis_jobs")
+            .update({
+              status: "failed",
+              error_message: result.message,
+              completed_at: new Date().toISOString(),
+            })
+            .eq("id", queuedJob.id);
+
+          failedJobs.push({ jobId: queuedJob.id, error: result.message });
+          continue;
+        }
+
+        const { error: completeError } = await supabase
+          .from("analysis_jobs")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", queuedJob.id);
+
+        if (completeError) {
+          throw completeError;
+        }
+
+        processedCount += 1;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to process job.";
+
+        await supabase
+          .from("analysis_jobs")
+          .update({
+            status: "failed",
+            error_message: message,
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", queuedJob.id);
+
+        failedJobs.push({ jobId: queuedJob.id, error: message });
+      }
     }
 
-    const { error: completeError } = await supabase
-      .from("analysis_jobs")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", queuedJob.id);
-
-    if (completeError) {
-      throw completeError;
-    }
-
-    return NextResponse.json({ processed: true, jobId: queuedJob.id });
+    return NextResponse.json({
+      processed: processedCount > 0,
+      count: processedCount,
+      failed: failedJobs,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to process queued job.";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/analysis-jobs/process-next?limit=5",
+      "schedule": "*/2 * * * *"
+    }
+  ]
+}

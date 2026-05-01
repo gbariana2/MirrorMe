@@ -79,6 +79,7 @@ MirrorMe now supports a queue-backed persistence path:
 1. `POST /api/analyses/:id/enqueue` inserts a queued `analysis_jobs` row.
 2. `POST /api/internal/analysis-jobs/process-next` claims one queued job and
    persists results to `analyses`, `analysis_frames`, and `analysis_issues`.
+   It now accepts `?limit=<n>` to process a small batch in one call.
 
 If `ANALYSIS_JOB_SECRET` is set, workers must provide:
 
@@ -97,6 +98,10 @@ curl -X POST \
   -H "x-analysis-job-secret: $ANALYSIS_JOB_SECRET" \
   http://localhost:3000/api/internal/analysis-jobs/process-next
 ```
+
+Production scheduling:
+
+- `vercel.json` runs `/api/internal/analysis-jobs/process-next?limit=5` every 2 minutes.
 
 ## Near-Term Build Priorities
 
