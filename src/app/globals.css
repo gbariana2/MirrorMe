@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff6dd;
-  --foreground: #2d1708;
-  --phulkari-red: #ff4a43;
-  --phulkari-orange: #ff8e1f;
-  --phulkari-yellow: #ffd447;
-  --phulkari-pink: #ff4f90;
-  --phulkari-green: #12a35a;
-  --phulkari-blue: #2278ff;
+  --background: #07080d;
+  --foreground: #eef2ff;
+  --neon-red: #ff4545;
+  --neon-orange: #ff8f2b;
+  --neon-yellow: #ffd84b;
+  --neon-pink: #ff57b3;
+  --neon-purple: #9d4dff;
+  --neon-blue: #2f95ff;
 }
 
 @theme inline {
@@ -34,16 +34,41 @@ body {
 
 .phulkari-bg {
   background:
-    radial-gradient(circle at 10% 18%, color-mix(in oklab, var(--phulkari-yellow) 50%, transparent), transparent 24%),
-    radial-gradient(circle at 92% 12%, color-mix(in oklab, var(--phulkari-pink) 52%, transparent), transparent 27%),
-    radial-gradient(circle at 80% 84%, color-mix(in oklab, var(--phulkari-blue) 38%, transparent), transparent 26%),
-    linear-gradient(140deg, #fff5c8 0%, #ffe5c5 34%, #ffe4dd 62%, #ffeec8 100%);
+    radial-gradient(circle at 8% 14%, color-mix(in oklab, var(--neon-red) 45%, transparent), transparent 22%),
+    radial-gradient(circle at 88% 10%, color-mix(in oklab, var(--neon-blue) 40%, transparent), transparent 24%),
+    radial-gradient(circle at 84% 88%, color-mix(in oklab, var(--neon-yellow) 32%, transparent), transparent 26%),
+    radial-gradient(circle at 17% 82%, color-mix(in oklab, var(--neon-pink) 28%, transparent), transparent 27%),
+    linear-gradient(160deg, #05060b 0%, #090a12 42%, #0e0f19 100%);
 }
 
-.phulkari-tile {
-  background-image:
-    linear-gradient(45deg, color-mix(in oklab, var(--phulkari-red) 26%, transparent) 25%, transparent 25%),
-    linear-gradient(-45deg, color-mix(in oklab, var(--phulkari-green) 22%, transparent) 25%, transparent 25%);
-  background-size: 16px 16px;
-  background-position: 0 0, 8px 8px;
+.rainbow-border {
+  position: relative;
+  isolation: isolate;
+}
+
+.rainbow-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 140deg,
+    var(--neon-red),
+    var(--neon-orange),
+    var(--neon-yellow),
+    #53dc5d,
+    var(--neon-blue),
+    var(--neon-purple),
+    var(--neon-pink),
+    var(--neon-red)
+  );
+  z-index: -1;
+  filter: blur(0.2px) saturate(1.15);
+}
+
+.bubble-glow {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.24), transparent 44%),
+    radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.12), transparent 46%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
 }
