@@ -19,6 +19,10 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isNonNegativeInteger(value: unknown): value is number {
+  return Number.isInteger(value) && typeof value === "number" && value >= 0;
+}
+
 function sanitizeNumber(value: number, decimals = 2) {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -45,16 +49,17 @@ function assertValidFrames(frames: unknown, label: string): PoseFrame[] {
     const timestampMs = (frame as { timestampMs?: unknown }).timestampMs;
     const landmarks = (frame as { landmarks?: unknown }).landmarks;
 
-    if (!Number.isInteger(timestampMs) || timestampMs < 0 || timestampMs > MAX_TIMESTAMP_MS) {
+    if (!isNonNegativeInteger(timestampMs) || timestampMs > MAX_TIMESTAMP_MS) {
       throw new Error(`${label}[${index}].timestampMs is invalid.`);
     }
+    const safeTimestampMs = timestampMs;
 
     if (!Array.isArray(landmarks) || landmarks.length > MAX_LANDMARKS) {
       throw new Error(`${label}[${index}].landmarks is invalid.`);
     }
 
     return {
-      timestampMs,
+      timestampMs: safeTimestampMs,
       landmarks: landmarks.map((point, landmarkIndex) => {
         if (!point || typeof point !== "object") {
           throw new Error(`${label}[${index}].landmarks[${landmarkIndex}] is invalid.`);
@@ -106,9 +111,10 @@ function assertValidIssues(issues: unknown): PoseIssue[] {
     const delta = (issue as { delta?: unknown }).delta;
     const notes = (issue as { notes?: unknown }).notes;
 
-    if (!Number.isInteger(timestampMs) || timestampMs < 0 || timestampMs > MAX_TIMESTAMP_MS) {
+    if (!isNonNegativeInteger(timestampMs) || timestampMs > MAX_TIMESTAMP_MS) {
       throw new Error(`issues[${index}].timestampMs is invalid.`);
     }
+    const safeTimestampMs = timestampMs;
 
     if (
       typeof jointName !== "string" ||
@@ -131,7 +137,7 @@ function assertValidIssues(issues: unknown): PoseIssue[] {
     }
 
     return {
-      timestampMs,
+      timestampMs: safeTimestampMs,
       jointName,
       severity,
       expectedAngle: sanitizeNumber(clamp(expectedAngle, 0, 360)),
