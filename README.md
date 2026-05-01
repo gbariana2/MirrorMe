@@ -50,6 +50,12 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+Verify required system setup:
+
+```bash
+npm run setup:check
+```
+
 ## Supabase Setup
 
 Create a local `.env.local` file with:
