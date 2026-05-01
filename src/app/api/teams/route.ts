@@ -56,18 +56,44 @@ export async function POST(request: Request) {
     const captainUserId = await getRequiredUserId(payload.captainUserId);
     const supabase = createServerSupabaseClient();
 
-    const { data: team, error: teamError } = await supabase
-      .from("teams")
-      .insert({
-        name: teamName,
-        created_by: captainUserId,
-        join_code: generateJoinCode(),
-      })
-      .select("id, name, join_code")
-      .single();
+    let team:
+      | {
+          id: string;
+          name: string;
+          join_code: string;
+        }
+      | null = null;
+    let lastInsertError: Error | null = null;
 
-    if (teamError || !team) {
-      throw teamError ?? new Error("Failed to create team.");
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const { data, error: insertError } = await supabase
+        .from("teams")
+        .insert({
+          name: teamName,
+          created_by: captainUserId,
+          join_code: generateJoinCode(),
+        })
+        .select("id, name, join_code")
+        .single();
+
+      if (!insertError && data) {
+        team = data;
+        break;
+      }
+
+      const isUniqueViolation =
+        (insertError as { code?: string } | null)?.code === "23505"
+        || insertError?.message.toLowerCase().includes("duplicate");
+
+      if (!isUniqueViolation) {
+        throw insertError ?? new Error("Failed to create team.");
+      }
+
+      lastInsertError = insertError;
+    }
+
+    if (!team) {
+      throw lastInsertError ?? new Error("Failed to create team.");
     }
 
     const { error: membershipError } = await supabase.from("team_memberships").insert({

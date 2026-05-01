@@ -35,6 +35,7 @@ export default function CaptainPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [seedCount, setSeedCount] = useState(8);
 
   const [teamName, setTeamName] = useState("");
   const [assignmentTitle, setAssignmentTitle] = useState("");
@@ -106,19 +107,44 @@ export default function CaptainPage() {
 
   async function handleCreateTeam(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    try {
+      setError(null);
+      const response = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamName }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(payload.error ?? "Failed to create team.");
+        return;
+      }
+      setTeamName("");
+      await loadTeams();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to create team.");
+    }
+  }
+
+  async function handleSeedDancers() {
+    if (!selectedTeamId) {
+      setError("Select a captain team first.");
+      return;
+    }
+
     setError(null);
-    const response = await fetch("/api/teams", {
+    const response = await fetch(`/api/teams/${selectedTeamId}/seed-dancers`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamName }),
+      body: JSON.stringify({ count: seedCount }),
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
-      setError(payload.error ?? "Failed to create team.");
+      setError(payload.error ?? "Failed to seed dancers.");
       return;
     }
-    setTeamName("");
-    await loadTeams();
+
+    await loadMembers(selectedTeamId);
   }
 
   async function handleCreateAssignment(event: React.FormEvent<HTMLFormElement>) {
@@ -236,6 +262,30 @@ export default function CaptainPage() {
                 <p className="mt-1 text-xs text-slate-300">Join code: {item.team.join_code}</p>
               </button>
             ))}
+          </div>
+
+          <div className="mt-6 rounded-xl border border-white/15 bg-[#121527] p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Test data</p>
+            <p className="mt-1 text-xs text-slate-400">
+              Add dummy dancers to the selected team for assignment testing.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={seedCount}
+                onChange={(event) => setSeedCount(Number(event.target.value))}
+                className="w-20 rounded-xl border border-white/20 bg-[#171c2f] px-3 py-2 text-xs outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleSeedDancers}
+                className="rounded-full border border-white/25 px-3 py-2 text-xs font-semibold text-slate-200"
+              >
+                Add dummy dancers
+              </button>
+            </div>
           </div>
         </section>
 
