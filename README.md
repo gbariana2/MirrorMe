@@ -31,8 +31,8 @@ movement domains.
 - MediaPipe Pose for landmark extraction
 - Vercel for deployment
 
-Clerk and additional multi-user features are intentionally deferred until the
-core comparison loop is stable.
+Clerk authentication is now wired at the app layer, while role-specific team UX
+is still being iterated.
 
 ## Development
 
@@ -65,11 +65,14 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ANALYSIS_JOB_SECRET=...
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
+CLERK_SECRET_KEY=...
 ```
 
 Current status:
 
 - The app is wired for the public Supabase client.
+- Clerk middleware and provider are wired for authentication.
 - The initial database schema lives in `supabase/migrations/`.
 - The `compare` flow uploads paired videos, stores records in Supabase, and creates
   an `analysis` review page.
@@ -108,6 +111,22 @@ curl -X POST \
 Production scheduling:
 
 - `vercel.json` runs `/api/internal/analysis-jobs/process-next?limit=5` every 2 minutes.
+
+## Team Mode Foundation
+
+Schema now includes:
+
+- `teams`
+- `team_memberships`
+- `assignments`
+- `assignment_submissions`
+
+Core endpoints:
+
+1. `POST /api/teams` create a team as captain.
+2. `POST /api/teams/:id/members` join a team with join code.
+3. `POST /api/teams/:id/assignments` create assignment (captain role required).
+4. `POST /api/assignments/:id/submit` submit dancer recording before deadline.
 
 ## Near-Term Build Priorities
 
