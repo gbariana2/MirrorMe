@@ -260,16 +260,16 @@ export function PoseAnalysisPanel({
   }
 
   return (
-    <section className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(59,38,16,0.08)] backdrop-blur sm:p-8">
+    <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
             Pose Analysis
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-stone-950">
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
             Run the first MediaPipe comparison pass
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-700">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
             This samples the first 10 seconds of both videos, computes a small set of joint
             angles, stores the resulting frames and issues, and updates the analysis record.
           </p>
@@ -279,37 +279,37 @@ export function PoseAnalysisPanel({
           type="button"
           onClick={runAnalysis}
           disabled={!isConfigured || isRunning}
-          className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[#2fa8ff] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.35)] transition hover:bg-[#66c2ff] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isRunning ? "Analyzing..." : "Run pose analysis"}
         </button>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Stored issues</p>
-          <p className="mt-2 text-3xl font-semibold text-stone-950">{issueCount}</p>
+        <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Stored issues</p>
+          <p className="mt-2 text-3xl font-semibold text-white">{issueCount}</p>
         </div>
-        <div className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Latest score</p>
-          <p className="mt-2 text-3xl font-semibold text-stone-950">
+        <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Latest score</p>
+          <p className="mt-2 text-3xl font-semibold text-white">
             {score === null ? "--" : score}
           </p>
         </div>
-        <div className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Sampling window</p>
-          <p className="mt-2 text-sm font-medium text-stone-800">0s to 10s, every 1s</p>
+        <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sampling window</p>
+          <p className="mt-2 text-sm font-medium text-slate-200">0s to 10s, every 1s</p>
         </div>
       </div>
 
       {summary ? (
-        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-6 text-emerald-800">
+        <div className="mt-6 rounded-2xl border border-emerald-300/35 bg-emerald-500/10 px-4 py-4 text-sm leading-6 text-emerald-200">
           {summary}
         </div>
       ) : null}
 
       {error ? (
-        <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm leading-6 text-rose-700">
+        <div className="mt-6 rounded-2xl border border-rose-400/40 bg-rose-500/15 px-4 py-4 text-sm leading-6 text-rose-200">
           {error}
         </div>
       ) : null}
@@ -319,9 +319,9 @@ export function PoseAnalysisPanel({
           {previews.map((preview) => (
             <div
               key={preview.timestampMs}
-              className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4"
+              className="rounded-2xl border border-white/15 bg-[#161922] p-4"
             >
-              <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 {preview.timestampMs} ms
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

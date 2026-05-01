@@ -67,47 +67,47 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
   );
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(246,186,78,0.25),_transparent_32%),linear-gradient(180deg,_#fff9ef_0%,_#f3efe6_46%,_#e6e1d7_100%)] px-6 py-8 text-stone-900 sm:px-10 lg:px-16">
+    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <section className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(59,38,16,0.08)] backdrop-blur sm:p-8">
+        <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
                 Analysis Review
               </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-stone-950">
+              <h1 className="mt-2 bg-gradient-to-r from-[#b8e4ff] via-[#7ecbff] to-[#37adff] bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
                 {submission?.title ?? "Submission"} vs. {reference?.title ?? "Reference"}
               </h1>
-              <p className="mt-3 text-sm leading-6 text-stone-700">
+              <p className="mt-3 text-sm leading-6 text-slate-300">
                 Analysis id: <span className="font-mono text-xs">{analysis.id}</span>
               </p>
             </div>
 
-            <div className="rounded-full border border-stone-900/10 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-700">
+            <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200">
               Status: {analysis.status}
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
+            <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 Overall score
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-950">
+              <p className="mt-2 text-3xl font-semibold text-white">
                 {analysis.overall_score ?? "--"}
               </p>
             </div>
-            <div className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
+            <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 Issues detected
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-950">{issues.length}</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{issues.length}</p>
             </div>
-            <div className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
+            <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                 Created
               </p>
-              <p className="mt-2 text-sm font-medium text-stone-800">
+              <p className="mt-2 text-sm font-medium text-slate-200">
                 {new Date(analysis.created_at).toLocaleString()}
               </p>
             </div>
@@ -115,19 +115,19 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
         </section>
 
         <section className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
-          <div className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(59,38,16,0.08)] backdrop-blur sm:p-8">
+          <div className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
                   Uploaded Assets
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-stone-950">
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
                   Reference and submission
                 </h2>
               </div>
               <Link
                 href="/compare"
-                className="rounded-full border border-stone-900/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
+                className="rounded-full border border-white/25 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
               >
                 New comparison
               </Link>
@@ -137,15 +137,15 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
               {[reference, submission].map((video, index) => (
                 <article
                   key={video?.id ?? index}
-                  className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4"
+                  className="rounded-2xl border border-white/15 bg-[#161922] p-4"
                 >
-                  <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                     {index === 0 ? "Reference" : "Submission"}
                   </p>
-                  <h3 className="mt-2 text-lg font-semibold text-stone-950">
+                  <h3 className="mt-2 text-lg font-semibold text-white">
                     {video?.title ?? "Untitled video"}
                   </h3>
-                  <p className="mt-3 text-sm text-stone-600">
+                  <p className="mt-3 text-sm text-slate-300">
                     Duration:{" "}
                     {video?.duration_ms ? `${(video.duration_ms / 1000).toFixed(1)}s` : "Unknown"}
                   </p>
@@ -154,7 +154,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                       href={video.file_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-4 inline-flex text-sm font-medium text-amber-700 underline"
+                      className="mt-4 inline-flex text-sm font-medium text-[#8fd4ff] underline"
                     >
                       Open stored asset
                     </a>
@@ -164,25 +164,25 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
             </div>
           </div>
 
-          <aside className="rounded-[2rem] border border-stone-900/10 bg-stone-950 p-6 text-stone-100 shadow-[0_20px_60px_rgba(59,38,16,0.08)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200/80">
+          <aside className="rounded-[2rem] border border-white/15 soft-panel p-6 text-slate-100 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
               Processing State
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
               Feedback report placeholder
             </h2>
-            <p className="mt-4 text-sm leading-6 text-stone-300">
+            <p className="mt-4 text-sm leading-6 text-slate-300">
               This page is already backed by real Supabase data. The next step is to
               fill `analysis_frames` and `analysis_issues` from the pose extraction
               pipeline instead of leaving the analysis pending.
             </p>
 
             {analysis.summary ? (
-              <div className="mt-6 rounded-2xl bg-white/6 p-4 text-sm leading-6 text-stone-300">
+              <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm leading-6 text-slate-300">
                 {analysis.summary}
               </div>
             ) : (
-              <div className="mt-6 rounded-2xl bg-white/6 p-4 text-sm leading-6 text-stone-300">
+              <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm leading-6 text-slate-300">
                 No generated summary yet.
               </div>
             )}
@@ -196,18 +196,18 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
           existingIssueCount={issues.length}
         />
 
-        <section className="rounded-[2rem] border border-stone-900/10 bg-white/80 p-6 shadow-[0_20px_60px_rgba(59,38,16,0.08)] backdrop-blur sm:p-8">
+        <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
               Issues
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-stone-950">
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
               Timestamped flags
             </h2>
           </div>
 
           {issues.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-stone-900/15 bg-stone-50 p-6 text-sm leading-6 text-stone-600">
+            <div className="rounded-2xl border border-dashed border-white/25 bg-[#161922] p-6 text-sm leading-6 text-slate-300">
               No comparison issues yet. Once frame analysis is wired in, major and minor
               mismatches will appear here with timestamps and angle deltas.
             </div>
@@ -216,27 +216,27 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
               {issues.map((issue) => (
                 <article
                   key={issue.id}
-                  className="rounded-2xl border border-stone-900/10 bg-stone-50 p-4"
+                  className="rounded-2xl border border-white/15 bg-[#161922] p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-stone-900">
+                      <p className="text-sm font-semibold text-white">
                         {issue.joint_name}
                       </p>
-                      <p className="text-xs uppercase tracking-[0.18em] text-stone-500">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                         {issue.timestamp_ms} ms
                       </p>
                     </div>
-                    <div className="rounded-full border border-stone-900/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-stone-700">
+                    <div className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">
                       {issue.severity}
                     </div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-stone-700">
+                  <p className="mt-3 text-sm leading-6 text-slate-300">
                     Expected {issue.expected_angle}&deg;, actual {issue.actual_angle}&deg;,
                     delta {issue.delta}&deg;.
                   </p>
                   {issue.notes ? (
-                    <p className="mt-2 text-sm leading-6 text-stone-600">{issue.notes}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">{issue.notes}</p>
                   ) : null}
                 </article>
               ))}

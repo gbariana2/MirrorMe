@@ -1,231 +1,111 @@
 import Link from "next/link";
+import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 
-const coreFlows = [
-  "Upload a reference choreography clip and a dancer submission.",
-  "Render pose overlays for both videos so the comparison is visible.",
-  "Flag major and minor form mismatches with timestamps and scores.",
+const captainActions = [
+  "Create a team and share join code with dancers.",
+  "Upload assignment reference videos and set deadlines.",
+  "Track who submitted and review scored feedback.",
 ];
 
-const weekPlan = [
-  {
-    label: "v1",
-    timeframe: "Week 6",
-    goal: "End-to-end upload, review, and timestamped feedback flow for one dancer video against one reference clip.",
-  },
-  {
-    label: "v2",
-    timeframe: "Week 7",
-    goal: "Improve comparison quality with better alignment, richer reports, and side-by-side review UX.",
-  },
-  {
-    label: "v3",
-    timeframe: "Week 8",
-    goal: "Add persistence with Supabase plus a usable review dashboard for repeated submissions.",
-  },
-  {
-    label: "v4",
-    timeframe: "Week 9",
-    goal: "Polish the full demo for the fair with sharper feedback, better visualizations, and stretch features that prove depth.",
-  },
+const dancerActions = [
+  "Join your team with the captain's join code.",
+  "Open assigned reference choreography for the week.",
+  "Upload your submission and view timestamped corrections.",
 ];
-
-const principles = [
-  {
-    title: "Start narrow",
-    copy: "Treat dance as the proving ground and avoid live webcam analysis, multi-user auth, or team views until the core comparison loop is stable.",
-  },
-  {
-    title: "Make feedback inspectable",
-    copy: "Every flagged issue should point to a timestamp, a body segment, and a measurable difference so the output is not a black-box score.",
-  },
-  {
-    title: "Ship weekly",
-    copy: "Each version needs visible progress in the public repo, not research notes. A thin vertical slice beats an unfinished ambitious branch.",
-  },
-];
-
-function MirrorMark() {
-  return (
-    <svg viewBox="0 0 400 120" className="h-14 w-[180px]" role="img" aria-label="MirrorMe MM logo">
-      <defs>
-        <linearGradient id="mmBlue" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#8fd4ff" />
-          <stop offset="100%" stopColor="#2fa8ff" />
-        </linearGradient>
-        <linearGradient id="mmMirror" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#9ca3af" />
-          <stop offset="100%" stopColor="#4b5563" />
-        </linearGradient>
-      </defs>
-      <path d="M0 120V0H40L100 72L160 0H200V120H160V46L100 112L40 46V120Z" fill="url(#mmBlue)" />
-      <path d="M200 120V0H240L300 72L360 0H400V120H360V46L300 112L240 46V120Z" fill="url(#mmMirror)" />
-    </svg>
-  );
-}
 
 export default function Home() {
   return (
     <main className="phulkari-bg min-h-screen px-5 py-8 text-slate-100 sm:px-10 lg:px-16 lg:py-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/15 soft-panel shadow-[0_20px_70px_rgba(0,0,0,0.55)]">
-          <div className="rounded-[2rem] px-6 py-8 sm:px-8 lg:px-12 lg:py-12">
-            
+        <section className="rounded-[2rem] border border-white/15 soft-panel p-6 sm:p-8 lg:p-10">
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8fd4ff]">
+                MirrorMe Platform
+              </p>
+              <h1 className="mt-3 bg-gradient-to-r from-[#b8e4ff] via-[#7ecbff] to-[#37adff] bg-clip-text text-4xl font-black tracking-[-0.03em] text-transparent sm:text-5xl lg:text-6xl">
+                Assignment-driven dance feedback for teams and solo practice.
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                Captains assign a reference video and deadline. Dancers submit before cutoff and
+                get similarity scoring, improvement notes, and exact timestamps where movement
+                drifts from the reference.
+              </p>
+            </div>
 
-            <div className="relative grid gap-8 lg:grid-cols-[1.25fr_0.95fr]">
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-slate-100">
-                    MirrorMe
-                  </span>
-                  <span className="text-sm font-medium text-slate-300">
-                    AI-assisted choreography review
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl border border-white/15 bg-black/35 p-3">
-                    <MirrorMark />
-                  </div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-300">
-                    Mirror Motion Engine
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <h1 className="max-w-3xl bg-gradient-to-r from-[#b8e4ff] via-[#7ecbff] to-[#37adff] bg-clip-text text-4xl font-black tracking-[-0.03em] text-transparent sm:text-5xl lg:text-6xl">
-                    Precision feedback with a mirror-first visual identity.
-                  </h1>
-                  <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-                    MirrorMe starts with the weekly dance captain workflow:
-                    review recorded submissions, overlay pose landmarks, and
-                    produce timestamped feedback that dancers can act on without
-                    waiting for manual review.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {coreFlows.map((flow) => (
-                    <div
-                      key={flow}
-                      className="rounded-2xl border border-white/15 bg-[#121527]/85 p-4 text-sm leading-6 text-slate-200 shadow-[0_10px_24px_rgba(10,12,25,0.45)]"
-                    >
-                      {flow}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    href="/compare"
+            <div className="flex items-center gap-3">
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
+              <Show when="signed-out">
+                <SignInButton mode="modal">
+                  <button
+                    type="button"
                     className="rounded-full bg-[#2fa8ff] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.4)] transition hover:bg-[#66c2ff]"
                   >
-                    Start v1 upload flow
-                  </Link>
-                  <a
-                    href="https://github.com/gbariana2/MirrorMe"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-bold text-slate-100 transition hover:bg-white/20"
-                  >
-                    View repo
-                  </a>
-                </div>
-              </div>
-
-              <div className="rounded-[1.75rem] border border-white/12 soft-panel">
-                <div className="h-full rounded-[1.75rem] p-6 text-slate-100">
-                  <div className="mb-6 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-                        MVP Scope
-                      </p>
-                      <h2 className="mt-2 text-2xl font-extrabold">Week 6 target</h2>
-                    </div>
-                    <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-slate-200">
-                      v1
-                    </div>
-                  </div>
-
-                  <ul className="space-y-3 text-sm leading-6 text-slate-300">
-                    <li>Reference video upload</li>
-                    <li>Dancer video upload</li>
-                    <li>MediaPipe pose overlays</li>
-                    <li>Angle-based difference detection</li>
-                    <li>Timestamped major/minor feedback report</li>
-                  </ul>
-
-                  <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm leading-6 text-slate-300">
-                    Biggest risk: noisy comparison logic. The first
-                    implementation should favor explainable heuristics over
-                    fragile ML-heavy automation.
-                  </div>
-                </div>
-              </div>
+                    Sign In
+                  </button>
+                </SignInButton>
+              </Show>
             </div>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Link
+              href="/compare"
+              className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#171c2f]"
+            >
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Solo Mode</p>
+              <p className="mt-2 text-xl font-bold text-white">Compare Now</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Upload reference and submission in one flow, then run analysis immediately.
+              </p>
+            </Link>
+
+            <article className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Captain Mode</p>
+              <p className="mt-2 text-xl font-bold text-white">Run Team Assignments</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Create team, publish choreography assignments, and review each dancer submission.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Dancer Mode</p>
+              <p className="mt-2 text-xl font-bold text-white">Submit Before Deadline</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Open your assignment, upload recording, and receive targeted corrections.
+              </p>
+            </article>
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-          <div className="rounded-[2rem] border border-white/12 soft-panel">
-            <div className="rounded-[2rem] p-6 sm:p-8">
-              <div className="mb-6">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8fd4ff]">
-                  Build Strategy
-                </p>
-                <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] text-white">
-                  Principles for the next four weeks
-                </h2>
-              </div>
+        <section className="grid gap-8 lg:grid-cols-2">
+          <article className="rounded-[2rem] border border-white/12 soft-panel p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8fd4ff]">
+              Captain Workflow
+            </p>
+            <ul className="mt-5 space-y-3 text-sm leading-7 text-slate-300">
+              {captainActions.map((item) => (
+                <li key={item} className="rounded-xl border border-white/12 bg-[#161922] p-4">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </article>
 
-              <div className="space-y-5">
-                {principles.map((principle) => (
-                  <div
-                    key={principle.title}
-                    className="rounded-2xl border border-white/15 bg-gradient-to-r from-[#171b33] to-[#1e1330] p-5"
-                  >
-                    <h3 className="text-lg font-extrabold text-white">
-                      {principle.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">
-                      {principle.copy}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/12 soft-panel">
-            <div className="rounded-[2rem] p-6 sm:p-8">
-              <div className="mb-6">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8fd4ff]">
-                  Delivery Plan
-                </p>
-                <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] text-white">
-                  Weekly version milestones
-                </h2>
-              </div>
-
-              <div className="space-y-4">
-                {weekPlan.map((item) => (
-                  <div
-                    key={item.label}
-                    className="grid gap-3 rounded-2xl border border-white/15 bg-[#161922] p-5 sm:grid-cols-[88px_1fr]"
-                  >
-                    <div>
-                      <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#8fd4ff]">
-                        {item.label}
-                      </div>
-                      <div className="mt-1 text-sm text-slate-400">
-                        {item.timeframe}
-                      </div>
-                    </div>
-                    <p className="text-sm leading-6 text-slate-200">{item.goal}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <article className="rounded-[2rem] border border-white/12 soft-panel p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8fd4ff]">
+              Dancer Workflow
+            </p>
+            <ul className="mt-5 space-y-3 text-sm leading-7 text-slate-300">
+              {dancerActions.map((item) => (
+                <li key={item} className="rounded-xl border border-white/12 bg-[#161922] p-4">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </article>
         </section>
       </div>
     </main>
