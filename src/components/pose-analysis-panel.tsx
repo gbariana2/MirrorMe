@@ -29,11 +29,6 @@ type Preview = {
   submissionImage: string;
 };
 
-type PersistResponse = {
-  overallScore: number;
-  summary: string;
-};
-
 function waitForEvent(target: HTMLMediaElement, eventName: "loadeddata" | "seeked") {
   return new Promise<void>((resolve, reject) => {
     const handleSuccess = () => {
@@ -216,7 +211,7 @@ export function PoseAnalysisPanel({
           ? `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset and did not flag any major joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.`
           : `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.`;
 
-      const response = await fetch(`/api/analyses/${analysisId}/process`, {
+      const enqueueResponse = await fetch(`/api/analyses/${analysisId}/enqueue`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -230,10 +225,19 @@ export function PoseAnalysisPanel({
         }),
       });
 
-      const payload = (await response.json()) as PersistResponse | { error: string };
+      const enqueuePayload = (await enqueueResponse.json()) as { error?: string };
 
-      if (!response.ok || "error" in payload) {
-        throw new Error("error" in payload ? payload.error : "Failed to save analysis.");
+      if (!enqueueResponse.ok) {
+        throw new Error(enqueuePayload.error ?? "Failed to enqueue analysis.");
+      }
+
+      const processResponse = await fetch("/api/internal/analysis-jobs/process-next", {
+        method: "POST",
+      });
+      const processPayload = (await processResponse.json()) as { error?: string };
+
+      if (!processResponse.ok) {
+        throw new Error(processPayload.error ?? "Failed to process analysis job.");
       }
 
       const mergedPreviews = referenceResult.previews.map((referencePreview, index) => ({
@@ -244,8 +248,8 @@ export function PoseAnalysisPanel({
 
       setPreviews(mergedPreviews);
       setIssueCount(comparison.issues.length);
-      setScore(payload.overallScore);
-      setSummary(payload.summary);
+      setScore(comparison.overallScore);
+      setSummary(nextSummary);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Pose analysis failed.");
     } finally {

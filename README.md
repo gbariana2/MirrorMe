@@ -58,6 +58,7 @@ Create a local `.env.local` file with:
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+ANALYSIS_JOB_SECRET=...
 ```
 
 Current status:
@@ -66,10 +67,36 @@ Current status:
 - The initial database schema lives in `supabase/migrations/`.
 - The `compare` flow uploads paired videos, stores records in Supabase, and creates
   an `analysis` review page.
-- The review page can now run a client-side MediaPipe pose pass, store sampled
-  frames and issues, and update the analysis score and summary.
+- The review page runs a client-side MediaPipe pose pass, then sends validated
+  payloads to a server queue (`analysis_jobs`) for server-side persistence.
 - The service role key should live in `.env.local` locally and in Vercel's
   server environment variables for deployment.
+
+## Analysis Job Queue
+
+MirrorMe now supports a queue-backed persistence path:
+
+1. `POST /api/analyses/:id/enqueue` inserts a queued `analysis_jobs` row.
+2. `POST /api/internal/analysis-jobs/process-next` claims one queued job and
+   persists results to `analyses`, `analysis_frames`, and `analysis_issues`.
+
+If `ANALYSIS_JOB_SECRET` is set, workers must provide:
+
+- `x-analysis-job-secret: <ANALYSIS_JOB_SECRET>`
+
+For local development, you can process one queued job manually:
+
+```bash
+curl -X POST http://localhost:3000/api/internal/analysis-jobs/process-next
+```
+
+Or with a secret:
+
+```bash
+curl -X POST \
+  -H "x-analysis-job-secret: $ANALYSIS_JOB_SECRET" \
+  http://localhost:3000/api/internal/analysis-jobs/process-next
+```
 
 ## Near-Term Build Priorities
 

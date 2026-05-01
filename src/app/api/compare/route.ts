@@ -5,8 +5,23 @@ import { VIDEO_BUCKET } from "@/lib/supabase/constants";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+const ALLOWED_VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-m4v",
+]);
 
 type VideoKind = "reference" | "submission";
+
+class HttpError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function getTitle(value: FormDataEntryValue | null, fallback: string) {
   if (typeof value !== "string") {
@@ -19,15 +34,22 @@ function getTitle(value: FormDataEntryValue | null, fallback: string) {
 
 function assertVideoFile(file: FormDataEntryValue | null, label: string) {
   if (!(file instanceof File)) {
-    throw new Error(`${label} is required.`);
+    throw new HttpError(`${label} is required.`, 400);
   }
 
   if (!file.type.startsWith("video/")) {
-    throw new Error(`${label} must be a video file.`);
+    throw new HttpError(`${label} must be a video file.`, 400);
+  }
+
+  if (!ALLOWED_VIDEO_MIME_TYPES.has(file.type)) {
+    throw new HttpError(
+      `${label} must be one of: ${Array.from(ALLOWED_VIDEO_MIME_TYPES).join(", ")}.`,
+      400,
+    );
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    throw new Error(`${label} must be smaller than 100 MB.`);
+    throw new HttpError(`${label} must be smaller than 100 MB.`, 400);
   }
 
   return file;
@@ -132,6 +154,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown upload error.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = error instanceof HttpError ? error.status : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
