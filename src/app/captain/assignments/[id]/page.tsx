@@ -11,7 +11,7 @@ type Props = {
 
 type AssigneeStatus = {
   dancerUserId: string;
-  status: "not_submitted" | "submitted" | "analyzed";
+  status: "not_submitted" | "submitted" | "processing" | "analyzed" | "failed";
   submittedAt: string | null;
   analysisId: string | null;
   reviewPath: string | null;
@@ -25,29 +25,52 @@ type AssignmentStatusResponse = {
     reference_video_id: string;
   };
   assignees: AssigneeStatus[];
+  summary: {
+    not_submitted: number;
+    submitted: number;
+    processing: number;
+    analyzed: number;
+    failed: number;
+  };
 };
 
 export default function CaptainAssignmentStatusPage({ params }: Props) {
   const [statusData, setStatusData] = useState<AssignmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const assignmentId = params.id;
 
-  useEffect(() => {
+  async function loadStatus() {
     if (!assignmentId) {
       return;
     }
 
-    fetch(`/api/assignments/${assignmentId}/status`)
-      .then(async (response) => {
-        const payload = (await response.json()) as AssignmentStatusResponse | { error: string };
-        if (!response.ok || "error" in payload) {
-          throw new Error("error" in payload ? payload.error : "Failed to load status.");
-        }
-        setStatusData(payload);
-      })
-      .catch((caughtError) => {
-        setError(caughtError instanceof Error ? caughtError.message : "Failed to load status.");
-      });
+    setIsRefreshing(true);
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}/status`);
+      const payload = (await response.json()) as AssignmentStatusResponse | { error: string };
+      if (!response.ok || "error" in payload) {
+        throw new Error("error" in payload ? payload.error : "Failed to load status.");
+      }
+      setStatusData(payload);
+      setError(null);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to load status.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadStatus();
+
+    const interval = setInterval(() => {
+      loadStatus();
+    }, 15000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId]);
 
   return (
@@ -55,9 +78,19 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
       <div className="mx-auto w-full max-w-5xl rounded-3xl border border-white/15 soft-panel p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">Assignment Assignee Status</h1>
-          <Link href="/captain" className="text-sm font-semibold text-[#8fd4ff] underline">
-            Back to captain dashboard
-          </Link>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={loadStatus}
+              disabled={isRefreshing}
+              className="rounded-full border border-white/25 px-3 py-1 text-xs font-semibold text-slate-200 disabled:opacity-50"
+            >
+              {isRefreshing ? "Refreshing..." : "Refresh"}
+            </button>
+            <Link href="/captain" className="text-sm font-semibold text-[#8fd4ff] underline">
+              Back to captain dashboard
+            </Link>
+          </div>
         </div>
 
         {statusData ? (
@@ -66,6 +99,23 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
             <p className="mt-1 text-xs text-slate-300">
               Due: {new Date(statusData.assignment.due_at).toLocaleString()}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
+                Not submitted: {statusData.summary.not_submitted}
+              </span>
+              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
+                Submitted: {statusData.summary.submitted}
+              </span>
+              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
+                Processing: {statusData.summary.processing}
+              </span>
+              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
+                Analyzed: {statusData.summary.analyzed}
+              </span>
+              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
+                Failed: {statusData.summary.failed}
+              </span>
+            </div>
           </div>
         ) : null}
 

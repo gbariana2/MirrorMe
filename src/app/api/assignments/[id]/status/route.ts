@@ -90,9 +90,14 @@ export async function GET(_request: Request, context: RouteContext) {
       const submission = submissionByDancer.get(dancerUserId);
       const analysis = submission ? analysisById.get(submission.analysis_id) : null;
 
-      let status: "not_submitted" | "submitted" | "analyzed" = "not_submitted";
+      let status: "not_submitted" | "submitted" | "processing" | "analyzed" | "failed" =
+        "not_submitted";
       if (submission && analysis?.status === "completed") {
         status = "analyzed";
+      } else if (submission && analysis?.status === "processing") {
+        status = "processing";
+      } else if (submission && analysis?.status === "failed") {
+        status = "failed";
       } else if (submission) {
         status = "submitted";
       }
@@ -106,7 +111,21 @@ export async function GET(_request: Request, context: RouteContext) {
       };
     });
 
-    return NextResponse.json({ assignment, assignees });
+    const summary = assignees.reduce(
+      (acc, assignee) => {
+        acc[assignee.status] += 1;
+        return acc;
+      },
+      {
+        not_submitted: 0,
+        submitted: 0,
+        processing: 0,
+        analyzed: 0,
+        failed: 0,
+      },
+    );
+
+    return NextResponse.json({ assignment, assignees, summary });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load assignment status.";
     const status = error instanceof HttpError ? error.status : 500;
