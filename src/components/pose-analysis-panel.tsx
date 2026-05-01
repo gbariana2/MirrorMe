@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DrawingUtils,
   FilesetResolver,
@@ -22,6 +22,7 @@ type PoseAnalysisPanelProps = {
   referenceVideoUrl: string | null;
   submissionVideoUrl: string | null;
   existingIssueCount: number;
+  autoRun?: boolean;
 };
 
 type Preview = {
@@ -154,6 +155,7 @@ export function PoseAnalysisPanel({
   referenceVideoUrl,
   submissionVideoUrl,
   existingIssueCount,
+  autoRun = false,
 }: PoseAnalysisPanelProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +163,7 @@ export function PoseAnalysisPanel({
   const [score, setScore] = useState<number | null>(null);
   const [issueCount, setIssueCount] = useState(existingIssueCount);
   const [previews, setPreviews] = useState<Preview[]>([]);
+  const hasAutoTriggeredRef = useRef(false);
 
   const isConfigured = useMemo(() => {
     return Boolean(referenceVideoUrl && submissionVideoUrl);
@@ -265,6 +268,21 @@ export function PoseAnalysisPanel({
       setIsRunning(false);
     }
   }
+
+  useEffect(() => {
+    if (
+      autoRun
+      && !hasAutoTriggeredRef.current
+      && !isRunning
+      && isConfigured
+      && referenceVideoUrl
+      && !isYouTubeUrl(referenceVideoUrl)
+    ) {
+      hasAutoTriggeredRef.current = true;
+      void runAnalysis();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, isRunning, isConfigured, referenceVideoUrl]);
 
   return (
     <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">

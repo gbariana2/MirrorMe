@@ -9,10 +9,15 @@ type ReviewPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    autorun?: string;
+  }>;
 };
 
-export default async function ReviewPage({ params }: ReviewPageProps) {
+export default async function ReviewPage({ params, searchParams }: ReviewPageProps) {
   const { id } = await params;
+  const query = await searchParams;
+  const autoRun = query.autorun === "1";
   const supabase = createServerSupabaseClient();
 
   const { data: analysis, error } = await supabase
@@ -195,6 +200,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
           referenceVideoUrl={reference?.file_url ?? null}
           submissionVideoUrl={submission?.file_url ?? null}
           existingIssueCount={issues.length}
+          autoRun={autoRun}
         />
 
         <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
