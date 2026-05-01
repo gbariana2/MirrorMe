@@ -62,21 +62,27 @@ export default function Home() {
               </p>
             </Link>
 
-            <article className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5">
+            <Link
+              href="/captain"
+              className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#171c2f]"
+            >
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Captain Mode</p>
               <p className="mt-2 text-xl font-bold text-white">Run Team Assignments</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Create team, publish choreography assignments, and review each dancer submission.
               </p>
-            </article>
+            </Link>
 
-            <article className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5">
+            <Link
+              href="/dancer"
+              className="rounded-2xl border border-white/15 bg-[#121527]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#171c2f]"
+            >
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Dancer Mode</p>
               <p className="mt-2 text-xl font-bold text-white">Submit Before Deadline</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Open your assignment, upload recording, and receive targeted corrections.
               </p>
-            </article>
+            </Link>
           </div>
         </section>
 
