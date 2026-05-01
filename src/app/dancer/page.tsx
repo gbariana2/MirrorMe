@@ -30,7 +30,7 @@ export default function DancerPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [joinTeamId, setJoinTeamId] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [submissionVideoIds, setSubmissionVideoIds] = useState<Record<string, string>>({});
+  const [submissionFiles, setSubmissionFiles] = useState<Record<string, File | null>>({});
   const [reviewLinks, setReviewLinks] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -98,17 +98,32 @@ export default function DancerPage() {
   }
 
   async function submitAssignment(assignmentId: string) {
-    const submissionVideoId = submissionVideoIds[assignmentId];
-    if (!submissionVideoId) {
-      setError("Provide a submission video id first.");
+    const submissionFile = submissionFiles[assignmentId];
+    if (!submissionFile) {
+      setError("Upload a submission video first.");
       return;
     }
 
     setError(null);
+    const uploadForm = new FormData();
+    uploadForm.append("kind", "submission");
+    uploadForm.append("title", `Assignment ${assignmentId} submission`);
+    uploadForm.append("video", submissionFile);
+
+    const uploadResponse = await fetch("/api/videos/upload", {
+      method: "POST",
+      body: uploadForm,
+    });
+    const uploadPayload = (await uploadResponse.json()) as { videoId?: string; error?: string };
+    if (!uploadResponse.ok || !uploadPayload.videoId) {
+      setError(uploadPayload.error ?? "Failed to upload submission video.");
+      return;
+    }
+
     const response = await fetch(`/api/assignments/${assignmentId}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ submissionVideoId }),
+      body: JSON.stringify({ submissionVideoId: uploadPayload.videoId }),
     });
 
     const payload = (await response.json()) as SubmissionResponse | { error: string };
@@ -185,14 +200,14 @@ export default function DancerPage() {
                 <p className="mt-1 text-xs text-slate-300">Reference video: {assignment.reference_video_id}</p>
                 <div className="mt-3 flex gap-2">
                   <input
-                    value={submissionVideoIds[assignment.id] ?? ""}
+                    type="file"
+                    accept="video/*"
                     onChange={(event) =>
-                      setSubmissionVideoIds((current) => ({
+                      setSubmissionFiles((current) => ({
                         ...current,
-                        [assignment.id]: event.target.value,
+                        [assignment.id]: event.target.files?.[0] ?? null,
                       }))
                     }
-                    placeholder="Submission video id"
                     className="w-full rounded-xl border border-white/20 bg-[#171c2f] px-3 py-2 text-xs outline-none"
                   />
                   <button

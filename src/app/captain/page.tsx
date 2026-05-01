@@ -29,7 +29,7 @@ export default function CaptainPage() {
 
   const [teamName, setTeamName] = useState("");
   const [assignmentTitle, setAssignmentTitle] = useState("");
-  const [referenceVideoId, setReferenceVideoId] = useState("");
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
 
@@ -103,12 +103,32 @@ export default function CaptainPage() {
       return;
     }
     setError(null);
+    if (!referenceFile) {
+      setError("Upload a reference video for this assignment.");
+      return;
+    }
+
+    const uploadForm = new FormData();
+    uploadForm.append("kind", "reference");
+    uploadForm.append("title", `${assignmentTitle} reference`);
+    uploadForm.append("video", referenceFile);
+
+    const uploadResponse = await fetch("/api/videos/upload", {
+      method: "POST",
+      body: uploadForm,
+    });
+    const uploadPayload = (await uploadResponse.json()) as { videoId?: string; error?: string };
+    if (!uploadResponse.ok || !uploadPayload.videoId) {
+      setError(uploadPayload.error ?? "Failed to upload reference video.");
+      return;
+    }
+
     const response = await fetch(`/api/teams/${selectedTeamId}/assignments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: assignmentTitle,
-        referenceVideoId,
+        referenceVideoId: uploadPayload.videoId,
         dueAt,
         instructions,
       }),
@@ -119,7 +139,7 @@ export default function CaptainPage() {
       return;
     }
     setAssignmentTitle("");
-    setReferenceVideoId("");
+    setReferenceFile(null);
     setDueAt("");
     setInstructions("");
     await loadAssignments(selectedTeamId);
@@ -177,9 +197,9 @@ export default function CaptainPage() {
               className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
             <input
-              value={referenceVideoId}
-              onChange={(event) => setReferenceVideoId(event.target.value)}
-              placeholder="Reference video id"
+              type="file"
+              accept="video/*"
+              onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
               className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
             <input
