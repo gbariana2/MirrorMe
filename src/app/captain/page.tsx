@@ -70,7 +70,8 @@ export default function CaptainPage() {
   }
 
   async function loadTeams() {
-    const response = await fetch("/api/teams");
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const response = await fetch(`/api/teams${query}`);
     const payload = await readJsonSafe<{ teams?: TeamRow[]; error?: string }>(response);
     if (!response.ok) {
       throw new Error(formatHttpError(response, "Failed to load teams.", payload?.error));

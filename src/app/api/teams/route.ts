@@ -9,9 +9,10 @@ type CreateTeamPayload = {
   captainUserId?: string;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const userId = await getRequiredUserId();
+    const { searchParams } = new URL(request.url);
+    const userId = await getRequiredUserId(searchParams.get("userId"));
     const supabase = createServerSupabaseClient();
 
     const { data, error } = await supabase
