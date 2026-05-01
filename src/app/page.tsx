@@ -48,19 +48,17 @@ function MirrorMark() {
   return (
     <svg viewBox="0 0 400 120" className="h-14 w-[180px]" role="img" aria-label="MirrorMe MM logo">
       <defs>
-        <linearGradient id="mmLeft" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ff5247" />
-          <stop offset="45%" stopColor="#ff8f2b" />
-          <stop offset="100%" stopColor="#ffd84b" />
+        <linearGradient id="mmBlue" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#8fd4ff" />
+          <stop offset="100%" stopColor="#2fa8ff" />
         </linearGradient>
-        <linearGradient id="mmRight" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#2f95ff" />
-          <stop offset="55%" stopColor="#6f67ff" />
-          <stop offset="100%" stopColor="#ff57b3" />
+        <linearGradient id="mmMirror" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#9ca3af" />
+          <stop offset="100%" stopColor="#4b5563" />
         </linearGradient>
       </defs>
-      <path d="M0 120V0H40L100 72L160 0H200V120H160V46L100 112L40 46V120Z" fill="url(#mmLeft)" />
-      <path d="M200 120V0H240L300 72L360 0H400V120H360V46L300 112L240 46V120Z" fill="url(#mmRight)" />
+      <path d="M0 120V0H40L100 72L160 0H200V120H160V46L100 112L40 46V120Z" fill="url(#mmBlue)" />
+      <path d="M200 120V0H240L300 72L360 0H400V120H360V46L300 112L240 46V120Z" fill="url(#mmMirror)" />
     </svg>
   );
 }
@@ -69,9 +67,9 @@ export default function Home() {
   return (
     <main className="phulkari-bg min-h-screen px-5 py-8 text-slate-100 sm:px-10 lg:px-16 lg:py-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <section className="rainbow-border relative overflow-hidden rounded-[2rem] p-[1px] shadow-[0_30px_90px_rgba(24,28,58,0.6)]">
-          <div className="bubble-glow rounded-[calc(2rem-1px)] border border-white/10 bg-[#0b0d17]/92 px-6 py-8 sm:px-8 lg:px-12 lg:py-12">
-            <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_15%_20%,rgba(255,84,70,0.28),transparent_18%),radial-gradient(circle_at_83%_18%,rgba(47,149,255,0.3),transparent_20%),radial-gradient(circle_at_85%_84%,rgba(255,216,75,0.2),transparent_20%)]" />
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/15 soft-panel shadow-[0_20px_70px_rgba(0,0,0,0.55)]">
+          <div className="rounded-[2rem] px-6 py-8 sm:px-8 lg:px-12 lg:py-12">
+            
 
             <div className="relative grid gap-8 lg:grid-cols-[1.25fr_0.95fr]">
               <div className="flex flex-col gap-6">
@@ -94,8 +92,8 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  <h1 className="max-w-3xl text-4xl font-black tracking-[-0.03em] text-white sm:text-5xl lg:text-6xl">
-                    Rainbow energy, black-stage focus, and feedback on every beat.
+                  <h1 className="max-w-3xl bg-gradient-to-r from-[#b8e4ff] via-[#7ecbff] to-[#37adff] bg-clip-text text-4xl font-black tracking-[-0.03em] text-transparent sm:text-5xl lg:text-6xl">
+                    Precision feedback with a mirror-first visual identity.
                   </h1>
                   <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
                     MirrorMe starts with the weekly dance captain workflow:
@@ -119,7 +117,7 @@ export default function Home() {
                 <div className="flex flex-wrap gap-3">
                   <Link
                     href="/compare"
-                    className="rounded-full bg-gradient-to-r from-[#ff4545] via-[#ffd84b] to-[#2f95ff] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_12px_26px_rgba(61,96,255,0.35)] transition hover:scale-[1.02]"
+                    className="rounded-full bg-[#2fa8ff] px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.4)] transition hover:bg-[#66c2ff]"
                   >
                     Start v1 upload flow
                   </Link>
@@ -134,8 +132,8 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="rainbow-border rounded-[1.75rem] p-[1px]">
-                <div className="h-full rounded-[calc(1.75rem-1px)] border border-white/10 bg-[#090c18]/95 p-6 text-slate-100">
+              <div className="rounded-[1.75rem] border border-white/12 soft-panel">
+                <div className="h-full rounded-[1.75rem] p-6 text-slate-100">
                   <div className="mb-6 flex items-center justify-between">
                     <div>
                       <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
@@ -168,10 +166,10 @@ export default function Home() {
         </section>
 
         <section className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-          <div className="rainbow-border rounded-[2rem] p-[1px]">
-            <div className="rounded-[calc(2rem-1px)] border border-white/10 bg-[#0a0f1d]/92 p-6 sm:p-8">
+          <div className="rounded-[2rem] border border-white/12 soft-panel">
+            <div className="rounded-[2rem] p-6 sm:p-8">
               <div className="mb-6">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#ff92c2]">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8fd4ff]">
                   Build Strategy
                 </p>
                 <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] text-white">
@@ -197,10 +195,10 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rainbow-border rounded-[2rem] p-[1px]">
-            <div className="rounded-[calc(2rem-1px)] border border-white/10 bg-[#121015]/92 p-6 sm:p-8">
+          <div className="rounded-[2rem] border border-white/12 soft-panel">
+            <div className="rounded-[2rem] p-6 sm:p-8">
               <div className="mb-6">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#7ec6ff]">
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#8fd4ff]">
                   Delivery Plan
                 </p>
                 <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.02em] text-white">
@@ -212,10 +210,10 @@ export default function Home() {
                 {weekPlan.map((item) => (
                   <div
                     key={item.label}
-                    className="grid gap-3 rounded-2xl border border-white/15 bg-[#1a1f35]/75 p-5 sm:grid-cols-[88px_1fr]"
+                    className="grid gap-3 rounded-2xl border border-white/15 bg-[#161922] p-5 sm:grid-cols-[88px_1fr]"
                   >
                     <div>
-                      <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#ffd84b]">
+                      <div className="text-sm font-bold uppercase tracking-[0.18em] text-[#8fd4ff]">
                         {item.label}
                       </div>
                       <div className="mt-1 text-sm text-slate-400">

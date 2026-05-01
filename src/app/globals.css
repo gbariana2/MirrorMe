@@ -1,14 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07080d;
-  --foreground: #eef2ff;
-  --neon-red: #ff4545;
-  --neon-orange: #ff8f2b;
-  --neon-yellow: #ffd84b;
-  --neon-pink: #ff57b3;
-  --neon-purple: #9d4dff;
-  --neon-blue: #2f95ff;
+  --background: #050505;
+  --foreground: #eef4ff;
 }
 
 @theme inline {
@@ -33,42 +27,9 @@ body {
 }
 
 .phulkari-bg {
-  background:
-    radial-gradient(circle at 8% 14%, color-mix(in oklab, var(--neon-red) 45%, transparent), transparent 22%),
-    radial-gradient(circle at 88% 10%, color-mix(in oklab, var(--neon-blue) 40%, transparent), transparent 24%),
-    radial-gradient(circle at 84% 88%, color-mix(in oklab, var(--neon-yellow) 32%, transparent), transparent 26%),
-    radial-gradient(circle at 17% 82%, color-mix(in oklab, var(--neon-pink) 28%, transparent), transparent 27%),
-    linear-gradient(160deg, #05060b 0%, #090a12 42%, #0e0f19 100%);
+  background: #050505;
 }
 
-.rainbow-border {
-  position: relative;
-  isolation: isolate;
-}
-
-.rainbow-border::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from 140deg,
-    var(--neon-red),
-    var(--neon-orange),
-    var(--neon-yellow),
-    #53dc5d,
-    var(--neon-blue),
-    var(--neon-purple),
-    var(--neon-pink),
-    var(--neon-red)
-  );
-  z-index: -1;
-  filter: blur(0.2px) saturate(1.15);
-}
-
-.bubble-glow {
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.24), transparent 44%),
-    radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.12), transparent 46%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+.soft-panel {
+  background: linear-gradient(160deg, rgba(17, 20, 30, 0.95), rgba(10, 12, 18, 0.95));
 }
