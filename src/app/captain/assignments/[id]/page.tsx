@@ -43,17 +43,6 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
     (assignee) => assignee.status === "submitted" && assignee.reviewPath,
   ) ?? [];
 
-  function runSubmittedAnalyses() {
-    if (submittedAssignees.length === 0) {
-      return;
-    }
-
-    for (const assignee of submittedAssignees) {
-      const url = `${assignee.reviewPath}?autorun=1`;
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  }
-
   async function loadStatus() {
     if (!assignmentId) {
       return;
@@ -93,14 +82,16 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">Assignment Assignee Status</h1>
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={runSubmittedAnalyses}
-              disabled={submittedAssignees.length === 0}
-              className="rounded-full bg-[#2fa8ff] px-3 py-1 text-xs font-semibold text-slate-950 disabled:opacity-40"
+            <Link
+              href={`/captain/assignments/${assignmentId}/run`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                submittedAssignees.length === 0
+                  ? "pointer-events-none bg-slate-500/40 text-slate-300"
+                  : "bg-[#2fa8ff] text-slate-950"
+              }`}
             >
-              Run Analyses ({submittedAssignees.length})
-            </button>
+              Batch Runner ({submittedAssignees.length})
+            </Link>
             <button
               type="button"
               onClick={loadStatus}
