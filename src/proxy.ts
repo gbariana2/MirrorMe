@@ -6,9 +6,6 @@ const isProtectedRoute = createRouteMatcher([
   "/review(.*)",
   "/captain(.*)",
   "/dancer(.*)",
-  "/api/teams(.*)",
-  "/api/assignments(.*)",
-  "/api/videos(.*)",
 ]);
 
 const hasClerkKeys =

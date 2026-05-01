@@ -48,13 +48,32 @@ export default function CaptainPage() {
 
   const captainTeams = useMemo(() => teams.filter((item) => item.role === "captain"), [teams]);
 
+  async function readJsonSafe<T>(response: Response) {
+    try {
+      return (await response.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  function formatHttpError(response: Response, fallback: string, apiError?: string) {
+    if (apiError) {
+      return apiError;
+    }
+    if (response.status === 401) {
+      return "Not authenticated. Please sign in again.";
+    }
+
+    return `${fallback} (HTTP ${response.status}${response.statusText ? `: ${response.statusText}` : ""})`;
+  }
+
   async function loadTeams() {
     const response = await fetch("/api/teams");
-    const payload = (await response.json()) as { teams?: TeamRow[]; error?: string };
+    const payload = await readJsonSafe<{ teams?: TeamRow[]; error?: string }>(response);
     if (!response.ok) {
-      throw new Error(payload.error ?? "Failed to load teams.");
+      throw new Error(formatHttpError(response, "Failed to load teams.", payload?.error));
     }
-    const nextTeams = payload.teams ?? [];
+    const nextTeams = payload?.teams ?? [];
     setTeams(nextTeams);
     if (!selectedTeamId && nextTeams.length > 0) {
       const firstCaptainTeam = nextTeams.find((item) => item.role === "captain");
@@ -66,20 +85,20 @@ export default function CaptainPage() {
 
   async function loadAssignments(teamId: string) {
     const response = await fetch(`/api/teams/${teamId}/assignments`);
-    const payload = (await response.json()) as { assignments?: Assignment[]; error?: string };
+    const payload = await readJsonSafe<{ assignments?: Assignment[]; error?: string }>(response);
     if (!response.ok) {
-      throw new Error(payload.error ?? "Failed to load assignments.");
+      throw new Error(formatHttpError(response, "Failed to load assignments.", payload?.error));
     }
-    setAssignments(payload.assignments ?? []);
+    setAssignments(payload?.assignments ?? []);
   }
 
   async function loadMembers(teamId: string) {
     const response = await fetch(`/api/teams/${teamId}/members`);
-    const payload = (await response.json()) as { members?: TeamMember[]; error?: string };
+    const payload = await readJsonSafe<{ members?: TeamMember[]; error?: string }>(response);
     if (!response.ok) {
-      throw new Error(payload.error ?? "Failed to load members.");
+      throw new Error(formatHttpError(response, "Failed to load members.", payload?.error));
     }
-    const dancers = (payload.members ?? []).filter((member) => member.role === "dancer");
+    const dancers = (payload?.members ?? []).filter((member) => member.role === "dancer");
     setMembers(dancers);
   }
 
@@ -103,6 +122,7 @@ export default function CaptainPage() {
     loadMembers(selectedTeamId).catch((caughtError) => {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load members.");
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamId]);
 
   async function handleCreateTeam(event: React.FormEvent<HTMLFormElement>) {
@@ -114,9 +134,9 @@ export default function CaptainPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamName }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJsonSafe<{ error?: string }>(response);
       if (!response.ok) {
-        setError(payload.error ?? "Failed to create team.");
+        setError(formatHttpError(response, "Failed to create team.", payload?.error));
         return;
       }
       setTeamName("");
@@ -138,9 +158,9 @@ export default function CaptainPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ count: seedCount }),
     });
-    const payload = (await response.json()) as { error?: string };
+    const payload = await readJsonSafe<{ error?: string }>(response);
     if (!response.ok) {
-      setError(payload.error ?? "Failed to seed dancers.");
+      setError(formatHttpError(response, "Failed to seed dancers.", payload?.error));
       return;
     }
 
