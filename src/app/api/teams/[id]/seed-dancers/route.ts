@@ -13,6 +13,7 @@ type RouteContext = {
 type SeedPayload = {
   count?: number;
   prefix?: string;
+  userId?: string;
 };
 
 function normalizePrefix(value: unknown) {
@@ -26,8 +27,8 @@ function normalizePrefix(value: unknown) {
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const userId = await getRequiredUserId();
     const payload = (await request.json()) as SeedPayload;
+    const userId = await getRequiredUserId(payload.userId);
     const count = Number.isFinite(payload.count) ? Math.min(30, Math.max(1, Math.floor(payload.count!))) : 8;
     const prefix = normalizePrefix(payload.prefix);
     const supabase = createServerSupabaseClient();

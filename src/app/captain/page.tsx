@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -30,6 +31,7 @@ type TeamMember = {
 };
 
 export default function CaptainPage() {
+  const { userId } = useAuth();
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -132,7 +134,7 @@ export default function CaptainPage() {
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamName }),
+        body: JSON.stringify({ teamName, captainUserId: userId ?? undefined }),
       });
       const payload = await readJsonSafe<{ error?: string }>(response);
       if (!response.ok) {
@@ -156,7 +158,7 @@ export default function CaptainPage() {
     const response = await fetch(`/api/teams/${selectedTeamId}/seed-dancers`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ count: seedCount }),
+      body: JSON.stringify({ count: seedCount, userId: userId ?? undefined }),
     });
     const payload = await readJsonSafe<{ error?: string }>(response);
     if (!response.ok) {
