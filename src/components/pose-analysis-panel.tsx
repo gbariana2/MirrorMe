@@ -9,6 +9,7 @@ import {
 } from "@mediapipe/tasks-vision";
 
 import { comparePoseFrames, type PoseFrame } from "@/lib/pose";
+import { isYouTubeUrl } from "@/lib/youtube";
 
 const SAMPLE_INTERVAL_MS = 1000;
 const MAX_ANALYSIS_DURATION_MS = 10000;
@@ -170,6 +171,12 @@ export function PoseAnalysisPanel({
       setError("Both videos must be available before analysis can run.");
       return;
     }
+    if (isYouTubeUrl(referenceVideoUrl)) {
+      setError(
+        "YouTube references are currently view-only. Upload a file-based reference to run pose analysis.",
+      );
+      return;
+    }
 
     setIsRunning(true);
     setError(null);
@@ -278,7 +285,7 @@ export function PoseAnalysisPanel({
         <button
           type="button"
           onClick={runAnalysis}
-          disabled={!isConfigured || isRunning}
+          disabled={!isConfigured || isRunning || isYouTubeUrl(referenceVideoUrl)}
           className="rounded-full bg-[#2fa8ff] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.35)] transition hover:bg-[#66c2ff] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isRunning ? "Analyzing..." : "Run pose analysis"}

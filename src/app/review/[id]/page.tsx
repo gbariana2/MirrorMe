@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { PoseAnalysisPanel } from "@/components/pose-analysis-panel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isYouTubeUrl } from "@/lib/youtube";
 
 type ReviewPageProps = {
   params: Promise<{
@@ -156,7 +157,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                       rel="noreferrer"
                       className="mt-4 inline-flex text-sm font-medium text-[#8fd4ff] underline"
                     >
-                      Open stored asset
+                      {isYouTubeUrl(video.file_url) ? "Open YouTube reference" : "Open stored asset"}
                     </a>
                   ) : null}
                 </article>

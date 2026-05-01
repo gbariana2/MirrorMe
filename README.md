@@ -128,6 +128,12 @@ Core endpoints:
 3. `POST /api/teams/:id/assignments` create assignment (captain role required) and
    assign specific dancers on the team.
 4. `POST /api/assignments/:id/submit` submit dancer recording before deadline.
+5. `POST /api/videos/youtube-reference` attach a YouTube URL as a view-only reference.
+
+Captain visibility:
+
+- `GET /api/assignments/:id/status` returns per-assignee status (`not_submitted`,
+  `submitted`, `analyzed`) and review links when available.
 
 ## Near-Term Build Priorities
 

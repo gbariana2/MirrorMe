@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type TeamRow = {
@@ -37,7 +38,9 @@ export default function CaptainPage() {
 
   const [teamName, setTeamName] = useState("");
   const [assignmentTitle, setAssignmentTitle] = useState("");
+  const [referenceSource, setReferenceSource] = useState<"upload" | "youtube">("upload");
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
@@ -125,24 +128,49 @@ export default function CaptainPage() {
       return;
     }
     setError(null);
-    if (!referenceFile) {
-      setError("Upload a reference video for this assignment.");
-      return;
-    }
+    let referenceVideoId = "";
 
-    const uploadForm = new FormData();
-    uploadForm.append("kind", "reference");
-    uploadForm.append("title", `${assignmentTitle} reference`);
-    uploadForm.append("video", referenceFile);
+    if (referenceSource === "upload") {
+      if (!referenceFile) {
+        setError("Upload a reference video for this assignment.");
+        return;
+      }
 
-    const uploadResponse = await fetch("/api/videos/upload", {
-      method: "POST",
-      body: uploadForm,
-    });
-    const uploadPayload = (await uploadResponse.json()) as { videoId?: string; error?: string };
-    if (!uploadResponse.ok || !uploadPayload.videoId) {
-      setError(uploadPayload.error ?? "Failed to upload reference video.");
-      return;
+      const uploadForm = new FormData();
+      uploadForm.append("kind", "reference");
+      uploadForm.append("title", `${assignmentTitle} reference`);
+      uploadForm.append("video", referenceFile);
+
+      const uploadResponse = await fetch("/api/videos/upload", {
+        method: "POST",
+        body: uploadForm,
+      });
+      const uploadPayload = (await uploadResponse.json()) as { videoId?: string; error?: string };
+      if (!uploadResponse.ok || !uploadPayload.videoId) {
+        setError(uploadPayload.error ?? "Failed to upload reference video.");
+        return;
+      }
+      referenceVideoId = uploadPayload.videoId;
+    } else {
+      if (!youtubeUrl.trim()) {
+        setError("Provide a YouTube URL for this assignment.");
+        return;
+      }
+
+      const youtubeResponse = await fetch("/api/videos/youtube-reference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: youtubeUrl,
+          title: `${assignmentTitle} reference`,
+        }),
+      });
+      const youtubePayload = (await youtubeResponse.json()) as { videoId?: string; error?: string };
+      if (!youtubeResponse.ok || !youtubePayload.videoId) {
+        setError(youtubePayload.error ?? "Failed to attach YouTube reference.");
+        return;
+      }
+      referenceVideoId = youtubePayload.videoId;
     }
 
     const response = await fetch(`/api/teams/${selectedTeamId}/assignments`, {
@@ -150,7 +178,7 @@ export default function CaptainPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: assignmentTitle,
-        referenceVideoId: uploadPayload.videoId,
+        referenceVideoId,
         dueAt,
         instructions,
         assigneeUserIds: selectedAssignees,
@@ -163,6 +191,7 @@ export default function CaptainPage() {
     }
     setAssignmentTitle("");
     setReferenceFile(null);
+    setYoutubeUrl("");
     setDueAt("");
     setInstructions("");
     setSelectedAssignees([]);
@@ -220,12 +249,45 @@ export default function CaptainPage() {
               placeholder="Assignment title"
               className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
-            <input
-              type="file"
-              accept="video/*"
-              onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
-            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setReferenceSource("upload")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  referenceSource === "upload"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-300"
+                }`}
+              >
+                Upload file
+              </button>
+              <button
+                type="button"
+                onClick={() => setReferenceSource("youtube")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  referenceSource === "youtube"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-300"
+                }`}
+              >
+                YouTube URL
+              </button>
+            </div>
+            {referenceSource === "upload" ? (
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
+                className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+              />
+            ) : (
+              <input
+                value={youtubeUrl}
+                onChange={(event) => setYoutubeUrl(event.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+              />
+            )}
             <input
               type="datetime-local"
               value={dueAt}
@@ -278,6 +340,12 @@ export default function CaptainPage() {
                 {typeof assignment.assignee_count === "number" ? (
                   <p className="mt-1 text-xs text-slate-300">Assignees: {assignment.assignee_count}</p>
                 ) : null}
+                <Link
+                  href={`/captain/assignments/${assignment.id}`}
+                  className="mt-2 inline-flex text-xs font-semibold text-[#8fd4ff] underline"
+                >
+                  View assignee status
+                </Link>
               </article>
             ))}
           </div>
