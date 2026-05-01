@@ -1,14 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f2ede4;
-  --foreground: #1f1810;
+  --background: #fff6dd;
+  --foreground: #2d1708;
+  --phulkari-red: #ff4a43;
+  --phulkari-orange: #ff8e1f;
+  --phulkari-yellow: #ffd447;
+  --phulkari-pink: #ff4f90;
+  --phulkari-green: #12a35a;
+  --phulkari-blue: #2278ff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Avenir Next", "Segoe UI", sans-serif;
+  --font-sans: "Trebuchet MS", "Gill Sans", "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", "SF Mono", monospace;
 }
 
@@ -24,4 +30,20 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+.phulkari-bg {
+  background:
+    radial-gradient(circle at 10% 18%, color-mix(in oklab, var(--phulkari-yellow) 50%, transparent), transparent 24%),
+    radial-gradient(circle at 92% 12%, color-mix(in oklab, var(--phulkari-pink) 52%, transparent), transparent 27%),
+    radial-gradient(circle at 80% 84%, color-mix(in oklab, var(--phulkari-blue) 38%, transparent), transparent 26%),
+    linear-gradient(140deg, #fff5c8 0%, #ffe5c5 34%, #ffe4dd 62%, #ffeec8 100%);
+}
+
+.phulkari-tile {
+  background-image:
+    linear-gradient(45deg, color-mix(in oklab, var(--phulkari-red) 26%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in oklab, var(--phulkari-green) 22%, transparent) 25%, transparent 25%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
 }
