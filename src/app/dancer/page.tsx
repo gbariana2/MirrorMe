@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -25,17 +26,18 @@ type SubmissionResponse = {
 };
 
 export default function DancerPage() {
+  const { userId } = useAuth();
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [joinTeamId, setJoinTeamId] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [submissionFiles, setSubmissionFiles] = useState<Record<string, File | null>>({});
   const [reviewLinks, setReviewLinks] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   async function loadTeams() {
-    const response = await fetch("/api/teams");
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const response = await fetch(`/api/teams${query}`);
     const payload = (await response.json()) as { teams?: TeamRow[]; error?: string };
     if (!response.ok) {
       throw new Error(payload.error ?? "Failed to load teams.");
@@ -80,10 +82,10 @@ export default function DancerPage() {
     event.preventDefault();
     setError(null);
 
-    const response = await fetch(`/api/teams/${joinTeamId}/members`, {
+    const response = await fetch("/api/teams/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ joinCode }),
+      body: JSON.stringify({ joinCode, userId: userId ?? undefined }),
     });
 
     const payload = (await response.json()) as { error?: string };
@@ -92,7 +94,6 @@ export default function DancerPage() {
       return;
     }
 
-    setJoinTeamId("");
     setJoinCode("");
     await loadTeams();
   }
@@ -149,15 +150,9 @@ export default function DancerPage() {
 
           <form className="mt-6 grid gap-3" onSubmit={joinTeam}>
             <input
-              value={joinTeamId}
-              onChange={(event) => setJoinTeamId(event.target.value)}
-              placeholder="Team id"
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
-            />
-            <input
               value={joinCode}
               onChange={(event) => setJoinCode(event.target.value)}
-              placeholder="Join code"
+              placeholder="Paste team join code (example: AB12CD)"
               className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
             <button

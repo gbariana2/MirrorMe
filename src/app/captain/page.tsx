@@ -37,6 +37,7 @@ export default function CaptainPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [seedCount, setSeedCount] = useState(8);
 
   const [teamName, setTeamName] = useState("");
@@ -247,6 +248,16 @@ export default function CaptainPage() {
     await loadAssignments(selectedTeamId);
   }
 
+  async function copyJoinCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode((current) => (current === code ? null : current)), 1500);
+    } catch {
+      setError("Failed to copy join code. You can still copy it manually.");
+    }
+  }
+
   return (
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
@@ -282,7 +293,19 @@ export default function CaptainPage() {
                 }`}
               >
                 <p className="text-sm font-semibold text-white">{item.team.name}</p>
-                <p className="mt-1 text-xs text-slate-300">Join code: {item.team.join_code}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs text-slate-300">Join code: {item.team.join_code}</p>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void copyJoinCode(item.team.join_code);
+                    }}
+                    className="rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
+                  >
+                    {copiedCode === item.team.join_code ? "Copied" : "Copy"}
+                  </button>
+                </div>
               </button>
             ))}
           </div>
