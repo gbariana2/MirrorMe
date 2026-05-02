@@ -8,7 +8,7 @@ const captainActions = [
 ];
 
 const dancerActions = [
-  "Join your team with the captain's join code.",
+  "Open captain invite link or enter the team join code.",
   "Open assigned reference choreography for the week.",
   "Upload your submission and view timestamped corrections.",
 ];
@@ -80,7 +80,7 @@ export default function Home() {
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Dancer Mode</p>
               <p className="mt-2 text-xl font-bold text-white">Submit Before Deadline</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Open your assignment, upload recording, and receive targeted corrections.
+                Join via invite link, open your assignment, and receive targeted corrections.
               </p>
             </Link>
           </div>

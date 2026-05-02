@@ -37,7 +37,7 @@ export default function CaptainPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [seedCount, setSeedCount] = useState(8);
 
   const [teamName, setTeamName] = useState("");
@@ -251,10 +251,23 @@ export default function CaptainPage() {
   async function copyJoinCode(code: string) {
     try {
       await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode((current) => (current === code ? null : current)), 1500);
+      const key = `code:${code}`;
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1500);
     } catch {
       setError("Failed to copy join code. You can still copy it manually.");
+    }
+  }
+
+  async function copyInviteLink(code: string) {
+    try {
+      const inviteLink = `${window.location.origin}/dancer?code=${encodeURIComponent(code)}`;
+      await navigator.clipboard.writeText(inviteLink);
+      const key = `invite:${code}`;
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1500);
+    } catch {
+      setError("Failed to copy invite link. You can still share the join code manually.");
     }
   }
 
@@ -303,7 +316,17 @@ export default function CaptainPage() {
                     }}
                     className="rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
                   >
-                    {copiedCode === item.team.join_code ? "Copied" : "Copy"}
+                    {copiedKey === `code:${item.team.join_code}` ? "Copied" : "Copy code"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void copyInviteLink(item.team.join_code);
+                    }}
+                    className="rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
+                  >
+                    {copiedKey === `invite:${item.team.join_code}` ? "Copied" : "Copy invite link"}
                   </button>
                 </div>
               </button>

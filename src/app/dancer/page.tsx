@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type TeamRow = {
@@ -27,6 +28,7 @@ type SubmissionResponse = {
 
 export default function DancerPage() {
   const { userId } = useAuth();
+  const searchParams = useSearchParams();
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -57,6 +59,14 @@ export default function DancerPage() {
     }
     setAssignments(payload.assignments ?? []);
   }
+
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code && code.trim().length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setJoinCode(code.trim().toUpperCase());
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -151,7 +161,7 @@ export default function DancerPage() {
           <form className="mt-6 grid gap-3" onSubmit={joinTeam}>
             <input
               value={joinCode}
-              onChange={(event) => setJoinCode(event.target.value)}
+              onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
               placeholder="Paste team join code (example: AB12CD)"
               className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
