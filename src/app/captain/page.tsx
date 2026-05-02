@@ -88,7 +88,8 @@ export default function CaptainPage() {
   }
 
   async function loadAssignments(teamId: string) {
-    const response = await fetch(`/api/teams/${teamId}/assignments`);
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const response = await fetch(`/api/teams/${teamId}/assignments${query}`);
     const payload = await readJsonSafe<{ assignments?: Assignment[]; error?: string }>(response);
     if (!response.ok) {
       throw new Error(formatHttpError(response, "Failed to load assignments.", payload?.error));
@@ -97,7 +98,8 @@ export default function CaptainPage() {
   }
 
   async function loadMembers(teamId: string) {
-    const response = await fetch(`/api/teams/${teamId}/members`);
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const response = await fetch(`/api/teams/${teamId}/members${query}`);
     const payload = await readJsonSafe<{ members?: TeamMember[]; error?: string }>(response);
     if (!response.ok) {
       throw new Error(formatHttpError(response, "Failed to load members.", payload?.error));

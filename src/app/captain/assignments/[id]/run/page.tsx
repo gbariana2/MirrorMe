@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -28,6 +29,7 @@ type AssignmentStatusResponse = {
 };
 
 export default function CaptainAssignmentBatchRunPage({ params }: Props) {
+  const { userId } = useAuth();
   const assignmentId = params.id;
   const [statusData, setStatusData] = useState<AssignmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,8 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
   const currentAssignee = submittedQueue[currentIndex] ?? null;
 
   async function loadStatus() {
-    const response = await fetch(`/api/assignments/${assignmentId}/status`);
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const response = await fetch(`/api/assignments/${assignmentId}/status${query}`);
     const payload = (await response.json()) as AssignmentStatusResponse | { error: string };
     if (!response.ok || "error" in payload) {
       throw new Error("error" in payload ? payload.error : "Failed to load assignment status.");
@@ -59,7 +62,7 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load assignment status.");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignmentId]);
+  }, [assignmentId, userId]);
 
   useEffect(() => {
     if (!isRunning || !currentAssignee) {
@@ -68,7 +71,8 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/assignments/${assignmentId}/status`);
+        const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+        const response = await fetch(`/api/assignments/${assignmentId}/status${query}`);
         const payload = (await response.json()) as AssignmentStatusResponse | { error: string };
         if (!response.ok || "error" in payload) {
           throw new Error("error" in payload ? payload.error : "Failed to refresh status.");
@@ -89,7 +93,7 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [assignmentId, currentAssignee, isRunning]);
+  }, [assignmentId, currentAssignee, isRunning, userId]);
 
   useEffect(() => {
     if (!isRunning) {

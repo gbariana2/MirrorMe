@@ -15,10 +15,11 @@ type JoinPayload = {
   joinCode: string;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const userId = await getRequiredUserId();
+    const { searchParams } = new URL(request.url);
+    const userId = await getRequiredUserId(searchParams.get("userId"));
     const supabase = createServerSupabaseClient();
 
     const { data: requester, error: requesterError } = await supabase

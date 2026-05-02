@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -35,6 +36,7 @@ type AssignmentStatusResponse = {
 };
 
 export default function CaptainAssignmentStatusPage({ params }: Props) {
+  const { userId } = useAuth();
   const [statusData, setStatusData] = useState<AssignmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -50,7 +52,8 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
 
     setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/assignments/${assignmentId}/status`);
+      const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+      const response = await fetch(`/api/assignments/${assignmentId}/status${query}`);
       const payload = (await response.json()) as AssignmentStatusResponse | { error: string };
       if (!response.ok || "error" in payload) {
         throw new Error("error" in payload ? payload.error : "Failed to load status.");
@@ -74,7 +77,7 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignmentId]);
+  }, [assignmentId, userId]);
 
   return (
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">

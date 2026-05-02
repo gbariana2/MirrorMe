@@ -52,7 +52,8 @@ export default function DancerPage() {
   }
 
   async function loadAssignments(teamId: string) {
-    const response = await fetch(`/api/teams/${teamId}/assignments`);
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    const response = await fetch(`/api/teams/${teamId}/assignments${query}`);
     const payload = (await response.json()) as { assignments?: Assignment[]; error?: string };
     if (!response.ok) {
       throw new Error(payload.error ?? "Failed to load assignments.");
@@ -86,6 +87,7 @@ export default function DancerPage() {
     loadAssignments(selectedTeamId).catch((caughtError) => {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load assignments.");
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamId]);
 
   async function joinTeam(event: React.FormEvent<HTMLFormElement>) {
