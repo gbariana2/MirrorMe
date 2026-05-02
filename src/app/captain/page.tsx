@@ -41,6 +41,15 @@ type HealthResponse = {
   checkedAt: string;
 };
 
+type BootstrapResponse = {
+  ok: boolean;
+  tableChecks: Array<{ table: string; ok: boolean; detail: string }>;
+  storage: { ok: boolean; detail: string };
+  nextSteps: string[];
+  checkedAt: string;
+  error?: string;
+};
+
 export default function CaptainPage() {
   const { userId } = useAuth();
   const [teams, setTeams] = useState<TeamRow[]>([]);
@@ -50,6 +59,8 @@ export default function CaptainPage() {
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isHealthLoading, setIsHealthLoading] = useState(false);
+  const [isBootstrapRunning, setIsBootstrapRunning] = useState(false);
+  const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [seedCount, setSeedCount] = useState(8);
   const [assignmentFilter, setAssignmentFilter] = useState<"active" | "archived" | "all">("active");
@@ -145,6 +156,35 @@ export default function CaptainPage() {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load system health.");
     } finally {
       setIsHealthLoading(false);
+    }
+  }
+
+  async function runSetupFix() {
+    setIsBootstrapRunning(true);
+    setBootstrapMessage(null);
+    try {
+      const response = await fetch("/api/system/bootstrap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userId ?? undefined }),
+      });
+      const payload = await readJsonSafe<BootstrapResponse>(response);
+      if (!response.ok || !payload) {
+        throw new Error(payload?.error ?? "Failed to run setup fix.");
+      }
+
+      if (payload.ok) {
+        setBootstrapMessage("Setup fix completed. System should be healthy after refresh.");
+      } else {
+        const nextStep = payload.nextSteps[0] ?? "Run Supabase migrations and refresh health.";
+        setBootstrapMessage(`Setup fix completed with follow-up required: ${nextStep}`);
+      }
+
+      await loadHealth();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to run setup fix.");
+    } finally {
+      setIsBootstrapRunning(false);
     }
   }
 
@@ -336,6 +376,16 @@ export default function CaptainPage() {
               >
                 {isHealthLoading ? "Checking..." : "Refresh"}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void runSetupFix();
+                }}
+                disabled={isBootstrapRunning}
+                className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+              >
+                {isBootstrapRunning ? "Running setup..." : "Run setup fix"}
+              </button>
             </div>
             {health ? (
               <div className="mt-3 grid gap-2">
@@ -369,6 +419,7 @@ export default function CaptainPage() {
                 <p className="text-[11px] text-slate-400">
                   Last checked: {new Date(health.checkedAt).toLocaleString()}
                 </p>
+                {bootstrapMessage ? <p className="text-[11px] text-slate-300">{bootstrapMessage}</p> : null}
               </div>
             ) : (
               <p className="mt-2 text-xs text-slate-400">No health data loaded yet.</p>
