@@ -34,9 +34,9 @@ type TeamMember = {
 type HealthResponse = {
   ok: boolean;
   checks: {
-    database: { ok: boolean; detail: string };
-    storage: { ok: boolean; detail: string };
-    analysisWorkerSecret: { ok: boolean; detail: string };
+    database: { ok: boolean; severity: "ok" | "warning" | "error"; detail: string };
+    storage: { ok: boolean; severity: "ok" | "warning" | "error"; detail: string };
+    analysisWorkerSecret: { ok: boolean; severity: "ok" | "warning" | "error"; detail: string };
   };
   checkedAt: string;
 };
@@ -52,6 +52,7 @@ export default function CaptainPage() {
   const [isHealthLoading, setIsHealthLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [seedCount, setSeedCount] = useState(8);
+  const [assignmentFilter, setAssignmentFilter] = useState<"active" | "archived" | "all">("active");
 
   const [teamName, setTeamName] = useState("");
   const [assignmentTitle, setAssignmentTitle] = useState("");
@@ -63,6 +64,15 @@ export default function CaptainPage() {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
   const captainTeams = useMemo(() => teams.filter((item) => item.role === "captain"), [teams]);
+  const filteredAssignments = useMemo(() => {
+    if (assignmentFilter === "all") {
+      return assignments;
+    }
+    if (assignmentFilter === "archived") {
+      return assignments.filter((assignment) => Boolean(assignment.archived_at));
+    }
+    return assignments.filter((assignment) => !assignment.archived_at);
+  }, [assignmentFilter, assignments]);
 
   async function readJsonSafe<T>(response: Response) {
     try {
@@ -337,8 +347,20 @@ export default function CaptainPage() {
                   <div key={check.label} className="rounded-lg border border-white/10 bg-[#171c2f] px-3 py-2">
                     <p className="text-xs font-semibold text-white">
                       {check.label}{" "}
-                      <span className={check.value.ok ? "text-emerald-300" : "text-rose-300"}>
-                        {check.value.ok ? "OK" : "Issue"}
+                      <span
+                        className={
+                          check.value.severity === "ok"
+                            ? "text-emerald-300"
+                            : check.value.severity === "warning"
+                              ? "text-amber-300"
+                              : "text-rose-300"
+                        }
+                      >
+                        {check.value.severity === "ok"
+                          ? "OK"
+                          : check.value.severity === "warning"
+                            ? "Warning"
+                            : "Issue"}
                       </span>
                     </p>
                     <p className="mt-1 text-[11px] text-slate-300">{check.value.detail}</p>
@@ -524,12 +546,53 @@ export default function CaptainPage() {
           </form>
 
           <div className="mt-6 space-y-3">
-            {assignments.filter((assignment) => !assignment.archived_at).map((assignment) => (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAssignmentFilter("active")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  assignmentFilter === "active"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 text-slate-300"
+                }`}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentFilter("archived")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  assignmentFilter === "archived"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 text-slate-300"
+                }`}
+              >
+                Archived
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentFilter("all")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  assignmentFilter === "all"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 text-slate-300"
+                }`}
+              >
+                All
+              </button>
+            </div>
+
+            {filteredAssignments.map((assignment) => (
               <article key={assignment.id} className="rounded-xl border border-white/15 bg-[#121527] p-4">
                 <p className="text-sm font-semibold text-white">{assignment.title}</p>
                 <p className="mt-1 text-xs text-slate-300">
                   Due: {new Date(assignment.due_at).toLocaleString()}
                 </p>
+                {assignment.archived_at ? (
+                  <p className="mt-1 text-xs font-semibold text-amber-300">
+                    Archived: {new Date(assignment.archived_at).toLocaleString()}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-xs text-slate-300">Reference video: {assignment.reference_video_id}</p>
                 {typeof assignment.assignee_count === "number" ? (
                   <p className="mt-1 text-xs text-slate-300">Assignees: {assignment.assignee_count}</p>
@@ -543,30 +606,6 @@ export default function CaptainPage() {
               </article>
             ))}
           </div>
-
-          {assignments.some((assignment) => assignment.archived_at) ? (
-            <div className="mt-6">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Archived assignments</p>
-              <div className="mt-3 space-y-3">
-                {assignments
-                  .filter((assignment) => assignment.archived_at)
-                  .map((assignment) => (
-                    <article key={assignment.id} className="rounded-xl border border-white/10 bg-[#121527]/70 p-4">
-                      <p className="text-sm font-semibold text-white">{assignment.title}</p>
-                      <p className="mt-1 text-xs text-slate-300">
-                        Archived: {assignment.archived_at ? new Date(assignment.archived_at).toLocaleString() : ""}
-                      </p>
-                      <Link
-                        href={`/captain/assignments/${assignment.id}`}
-                        className="mt-2 inline-flex text-xs font-semibold text-[#8fd4ff] underline"
-                      >
-                        Open archived assignment
-                      </Link>
-                    </article>
-                  ))}
-              </div>
-            </div>
-          ) : null}
 
           {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
         </section>
