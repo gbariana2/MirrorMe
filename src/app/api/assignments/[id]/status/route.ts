@@ -54,6 +54,17 @@ export async function GET(request: Request, context: RouteContext) {
       throw targetsError;
     }
 
+    const { data: teamDancers, error: teamDancersError } = await supabase
+      .from("team_memberships")
+      .select("user_id")
+      .eq("team_id", assignment.team_id)
+      .eq("role", "dancer")
+      .order("created_at", { ascending: true });
+
+    if (teamDancersError) {
+      throw teamDancersError;
+    }
+
     const dancerUserIds = (targets ?? []).map((item) => item.dancer_user_id);
 
     if (dancerUserIds.length === 0) {
@@ -126,7 +137,12 @@ export async function GET(request: Request, context: RouteContext) {
       },
     );
 
-    return NextResponse.json({ assignment, assignees, summary });
+    return NextResponse.json({
+      assignment,
+      assignees,
+      summary,
+      teamDancerUserIds: (teamDancers ?? []).map((row) => row.user_id),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load assignment status.";
     const status = error instanceof HttpError ? error.status : 500;

@@ -33,6 +33,7 @@ type AssignmentStatusResponse = {
     analyzed: number;
     failed: number;
   };
+  teamDancerUserIds: string[];
 };
 
 export default function CaptainAssignmentStatusPage({ params }: Props) {
@@ -40,6 +41,9 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
   const [statusData, setStatusData] = useState<AssignmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editDueAt, setEditDueAt] = useState("");
+  const [editAssignees, setEditAssignees] = useState<string[]>([]);
   const assignmentId = params.id;
   const submittedAssignees = statusData?.assignees.filter(
     (assignee) => assignee.status === "submitted" && assignee.reviewPath,
@@ -59,6 +63,8 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
         throw new Error("error" in payload ? payload.error : "Failed to load status.");
       }
       setStatusData(payload);
+      setEditDueAt(payload.assignment.due_at.slice(0, 16));
+      setEditAssignees(payload.assignees.map((assignee) => assignee.dancerUserId));
       setError(null);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load status.");
@@ -78,6 +84,33 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId, userId]);
+
+  async function saveAssignmentEdits() {
+    if (!assignmentId) {
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          captainUserId: userId ?? undefined,
+          dueAt: editDueAt,
+          assigneeUserIds: editAssignees,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to update assignment.");
+      }
+      await loadStatus();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to update assignment.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
@@ -131,6 +164,44 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
               <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
                 Failed: {statusData.summary.failed}
               </span>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-white/15 bg-[#171c2f] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Edit assignment</p>
+              <div className="mt-3 grid gap-3">
+                <input
+                  type="datetime-local"
+                  value={editDueAt}
+                  onChange={(event) => setEditDueAt(event.target.value)}
+                  className="rounded-xl border border-white/20 bg-[#121527] px-3 py-2 text-xs outline-none"
+                />
+                <div className="grid gap-2">
+                  {statusData.teamDancerUserIds.map((dancerUserId) => (
+                    <label key={dancerUserId} className="flex items-center gap-2 text-xs text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={editAssignees.includes(dancerUserId)}
+                        onChange={(event) => {
+                          setEditAssignees((current) =>
+                            event.target.checked
+                              ? [...current, dancerUserId]
+                              : current.filter((value) => value !== dancerUserId),
+                          );
+                        }}
+                      />
+                      <span>{dancerUserId}</span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={saveAssignmentEdits}
+                  disabled={isSaving}
+                  className="w-fit rounded-full bg-[#2fa8ff] px-3 py-1 text-xs font-semibold text-slate-950 disabled:opacity-60"
+                >
+                  {isSaving ? "Saving..." : "Save changes"}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
