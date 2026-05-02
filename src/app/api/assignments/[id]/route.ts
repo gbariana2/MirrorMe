@@ -117,3 +117,51 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: message }, { status });
   }
 }
+
+export async function DELETE(request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const { searchParams } = new URL(request.url);
+    const captainUserId = await getRequiredUserId(searchParams.get("userId"));
+    const supabase = createServerSupabaseClient();
+
+    const { data: assignment, error: assignmentError } = await supabase
+      .from("assignments")
+      .select("id, team_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (assignmentError) {
+      throw assignmentError;
+    }
+    if (!assignment) {
+      return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
+    }
+
+    const { data: captainMembership, error: captainMembershipError } = await supabase
+      .from("team_memberships")
+      .select("id")
+      .eq("team_id", assignment.team_id)
+      .eq("user_id", captainUserId)
+      .eq("role", "captain")
+      .maybeSingle();
+
+    if (captainMembershipError) {
+      throw captainMembershipError;
+    }
+    if (!captainMembership) {
+      return NextResponse.json({ error: "Captain membership required." }, { status: 403 });
+    }
+
+    const { error: deleteError } = await supabase.from("assignments").delete().eq("id", assignment.id);
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return NextResponse.json({ assignmentId: assignment.id, deleted: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete assignment.";
+    const status = error instanceof HttpError ? error.status : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}

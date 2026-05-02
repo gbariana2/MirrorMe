@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Props = {
@@ -38,10 +39,12 @@ type AssignmentStatusResponse = {
 
 export default function CaptainAssignmentStatusPage({ params }: Props) {
   const { userId } = useAuth();
+  const router = useRouter();
   const [statusData, setStatusData] = useState<AssignmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editDueAt, setEditDueAt] = useState("");
   const [editAssignees, setEditAssignees] = useState<string[]>([]);
   const assignmentId = params.id;
@@ -109,6 +112,36 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to update assignment.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function deleteAssignment() {
+    if (!assignmentId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this assignment? This removes assignment targets and submissions for this assignment.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+      const response = await fetch(`/api/assignments/${assignmentId}${query}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete assignment.");
+      }
+      router.push("/captain");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to delete assignment.");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -200,6 +233,14 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
                   className="w-fit rounded-full bg-[#2fa8ff] px-3 py-1 text-xs font-semibold text-slate-950 disabled:opacity-60"
                 >
                   {isSaving ? "Saving..." : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteAssignment}
+                  disabled={isDeleting}
+                  className="w-fit rounded-full border border-rose-400/60 px-3 py-1 text-xs font-semibold text-rose-200 disabled:opacity-60"
+                >
+                  {isDeleting ? "Deleting..." : "Delete assignment"}
                 </button>
               </div>
             </div>
