@@ -24,6 +24,7 @@ export async function GET(request: Request, context: RouteContext) {
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const userId = await getRequiredUserId(searchParams.get("userId"));
+    const includeArchived = searchParams.get("includeArchived") === "1";
     const supabase = createServerSupabaseClient();
 
     const { data: member, error: memberError } = await supabase
@@ -60,9 +61,13 @@ export async function GET(request: Request, context: RouteContext) {
 
     let query = supabase
       .from("assignments")
-      .select("id, title, instructions, due_at, reference_video_id, created_at")
+      .select("id, title, instructions, due_at, reference_video_id, created_at, archived_at")
       .eq("team_id", id)
       .order("due_at", { ascending: true });
+
+    if (member.role === "dancer" || !includeArchived) {
+      query = query.is("archived_at", null);
+    }
 
     if (targetedAssignmentIds) {
       query = query.in("id", targetedAssignmentIds);

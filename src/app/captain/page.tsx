@@ -21,6 +21,7 @@ type Assignment = {
   due_at: string;
   reference_video_id: string;
   created_at: string;
+  archived_at?: string | null;
   assignee_count?: number;
 };
 
@@ -101,7 +102,8 @@ export default function CaptainPage() {
 
   async function loadAssignments(teamId: string) {
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
-    const response = await fetch(`/api/teams/${teamId}/assignments${query}`);
+    const joiner = query ? "&" : "?";
+    const response = await fetch(`/api/teams/${teamId}/assignments${query}${joiner}includeArchived=1`);
     const payload = await readJsonSafe<{ assignments?: Assignment[]; error?: string }>(response);
     if (!response.ok) {
       throw new Error(formatHttpError(response, "Failed to load assignments.", payload?.error));
@@ -522,7 +524,7 @@ export default function CaptainPage() {
           </form>
 
           <div className="mt-6 space-y-3">
-            {assignments.map((assignment) => (
+            {assignments.filter((assignment) => !assignment.archived_at).map((assignment) => (
               <article key={assignment.id} className="rounded-xl border border-white/15 bg-[#121527] p-4">
                 <p className="text-sm font-semibold text-white">{assignment.title}</p>
                 <p className="mt-1 text-xs text-slate-300">
@@ -541,6 +543,30 @@ export default function CaptainPage() {
               </article>
             ))}
           </div>
+
+          {assignments.some((assignment) => assignment.archived_at) ? (
+            <div className="mt-6">
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Archived assignments</p>
+              <div className="mt-3 space-y-3">
+                {assignments
+                  .filter((assignment) => assignment.archived_at)
+                  .map((assignment) => (
+                    <article key={assignment.id} className="rounded-xl border border-white/10 bg-[#121527]/70 p-4">
+                      <p className="text-sm font-semibold text-white">{assignment.title}</p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        Archived: {assignment.archived_at ? new Date(assignment.archived_at).toLocaleString() : ""}
+                      </p>
+                      <Link
+                        href={`/captain/assignments/${assignment.id}`}
+                        className="mt-2 inline-flex text-xs font-semibold text-[#8fd4ff] underline"
+                      >
+                        Open archived assignment
+                      </Link>
+                    </article>
+                  ))}
+              </div>
+            </div>
+          ) : null}
 
           {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
         </section>

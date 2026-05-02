@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const { data: assignment, error: assignmentError } = await supabase
       .from("assignments")
-      .select("id, team_id, reference_video_id, due_at")
+      .select("id, team_id, reference_video_id, due_at, archived_at")
       .eq("id", id)
       .maybeSingle();
 
@@ -34,6 +34,9 @@ export async function POST(request: Request, context: RouteContext) {
     }
     if (!assignment) {
       return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
+    }
+    if (assignment.archived_at) {
+      return NextResponse.json({ error: "Assignment is archived." }, { status: 409 });
     }
 
     if (Date.now() > new Date(assignment.due_at).getTime()) {

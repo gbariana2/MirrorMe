@@ -25,6 +25,7 @@ type AssignmentStatusResponse = {
     title: string;
     due_at: string;
     reference_video_id: string;
+    archived_at?: string | null;
   };
   assignees: AssigneeStatus[];
   summary: {
@@ -44,7 +45,7 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [editDueAt, setEditDueAt] = useState("");
   const [editAssignees, setEditAssignees] = useState<string[]>([]);
   const assignmentId = params.id;
@@ -115,33 +116,43 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
     }
   }
 
-  async function deleteAssignment() {
+  async function toggleArchiveAssignment() {
     if (!assignmentId) {
       return;
     }
+    const currentlyArchived = Boolean(statusData?.assignment.archived_at);
 
     const confirmed = window.confirm(
-      "Delete this assignment? This removes assignment targets and submissions for this assignment.",
+      currentlyArchived
+        ? "Restore this archived assignment?"
+        : "Archive this assignment? You can restore it later.",
     );
     if (!confirmed) {
       return;
     }
 
-    setIsDeleting(true);
+    setIsArchiving(true);
     try {
-      const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
-      const response = await fetch(`/api/assignments/${assignmentId}${query}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/assignments/${assignmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          captainUserId: userId ?? undefined,
+          archived: !currentlyArchived,
+        }),
       });
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to delete assignment.");
+        throw new Error(payload.error ?? "Failed to update archive state.");
       }
-      router.push("/captain");
+      await loadStatus();
+      if (!currentlyArchived) {
+        router.push("/captain");
+      }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Failed to delete assignment.");
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to update archive state.");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
     }
   }
 
@@ -178,6 +189,11 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
         {statusData ? (
           <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
             <p className="text-sm font-semibold text-white">{statusData.assignment.title}</p>
+            {statusData.assignment.archived_at ? (
+              <p className="mt-1 text-xs font-semibold text-amber-300">
+                Archived on {new Date(statusData.assignment.archived_at).toLocaleString()}
+              </p>
+            ) : null}
             <p className="mt-1 text-xs text-slate-300">
               Due: {new Date(statusData.assignment.due_at).toLocaleString()}
             </p>
@@ -236,11 +252,15 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
                 </button>
                 <button
                   type="button"
-                  onClick={deleteAssignment}
-                  disabled={isDeleting}
+                  onClick={toggleArchiveAssignment}
+                  disabled={isArchiving}
                   className="w-fit rounded-full border border-rose-400/60 px-3 py-1 text-xs font-semibold text-rose-200 disabled:opacity-60"
                 >
-                  {isDeleting ? "Deleting..." : "Delete assignment"}
+                  {isArchiving
+                    ? "Saving..."
+                    : statusData.assignment.archived_at
+                      ? "Restore assignment"
+                      : "Archive assignment"}
                 </button>
               </div>
             </div>

@@ -19,7 +19,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const { data: assignment, error: assignmentError } = await supabase
       .from("assignments")
-      .select("id, team_id, title, due_at, reference_video_id")
+      .select("id, team_id, title, due_at, reference_video_id, archived_at")
       .eq("id", id)
       .maybeSingle();
 

@@ -14,6 +14,7 @@ type UpdateAssignmentPayload = {
   captainUserId?: string;
   dueAt?: string;
   assigneeUserIds?: string[];
+  archived?: boolean;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -22,6 +23,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const payload = (await request.json()) as Partial<UpdateAssignmentPayload>;
     const captainUserId = await getRequiredUserId(payload.captainUserId);
     const dueAt = payload.dueAt ? assertDueAt(payload.dueAt) : null;
+    const archiveState = typeof payload.archived === "boolean" ? payload.archived : null;
     const assigneeUserIds = Array.isArray(payload.assigneeUserIds)
       ? payload.assigneeUserIds
           .map((value) => (typeof value === "string" ? value.trim() : ""))
@@ -64,6 +66,16 @@ export async function PATCH(request: Request, context: RouteContext) {
         .eq("id", assignment.id);
       if (updateError) {
         throw updateError;
+      }
+    }
+
+    if (archiveState !== null) {
+      const { error: archiveError } = await supabase
+        .from("assignments")
+        .update({ archived_at: archiveState ? new Date().toISOString() : null })
+        .eq("id", assignment.id);
+      if (archiveError) {
+        throw archiveError;
       }
     }
 
@@ -153,12 +165,15 @@ export async function DELETE(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Captain membership required." }, { status: 403 });
     }
 
-    const { error: deleteError } = await supabase.from("assignments").delete().eq("id", assignment.id);
-    if (deleteError) {
-      throw deleteError;
+    const { error: archiveError } = await supabase
+      .from("assignments")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", assignment.id);
+    if (archiveError) {
+      throw archiveError;
     }
 
-    return NextResponse.json({ assignmentId: assignment.id, deleted: true });
+    return NextResponse.json({ assignmentId: assignment.id, archived: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete assignment.";
     const status = error instanceof HttpError ? error.status : 500;
