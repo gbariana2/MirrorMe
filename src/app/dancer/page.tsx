@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -26,7 +27,7 @@ type SubmissionResponse = {
   reviewPath: string;
 };
 
-export default function DancerPage() {
+function DancerDashboard() {
   const { userId } = useAuth();
   const searchParams = useSearchParams();
   const [teams, setTeams] = useState<TeamRow[]>([]);
@@ -241,5 +242,21 @@ export default function DancerPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function DancerPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
+          <div className="mx-auto w-full max-w-6xl rounded-3xl border border-white/15 soft-panel p-6">
+            <p className="text-sm text-slate-300">Loading dancer dashboard...</p>
+          </div>
+        </main>
+      }
+    >
+      <DancerDashboard />
+    </Suspense>
   );
 }
