@@ -71,7 +71,8 @@ export default function CaptainPage() {
   const [referenceSource, setReferenceSource] = useState<"upload" | "youtube">("upload");
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [dueAt, setDueAt] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [instructions, setInstructions] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
@@ -267,6 +268,11 @@ export default function CaptainPage() {
     setIsCreatingAssignment(true);
     try {
       setError(null);
+      if (!dueDate || !dueTime) {
+        setError("Select both a due date and due time.");
+        return;
+      }
+      const dueAt = new Date(`${dueDate}T${dueTime}`).toISOString();
       let referenceVideoId = "";
 
       if (referenceSource === "upload") {
@@ -336,7 +342,8 @@ export default function CaptainPage() {
       setAssignmentTitle("");
       setReferenceFile(null);
       setYoutubeUrl("");
-      setDueAt("");
+      setDueDate("");
+      setDueTime("");
       setInstructions("");
       setSelectedAssignees([]);
       await loadAssignments(selectedTeamId);
@@ -548,7 +555,7 @@ export default function CaptainPage() {
                   referenceSource === "upload"
                     ? "bg-[#2fa8ff] text-slate-950"
                     : "border border-white/25 bg-transparent text-slate-300"
-                }`}
+                } cursor-pointer`}
               >
                 Upload file
               </button>
@@ -559,7 +566,7 @@ export default function CaptainPage() {
                   referenceSource === "youtube"
                     ? "bg-[#2fa8ff] text-slate-950"
                     : "border border-white/25 bg-transparent text-slate-300"
-                }`}
+                } cursor-pointer`}
               >
                 YouTube URL
               </button>
@@ -579,12 +586,26 @@ export default function CaptainPage() {
                 className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
               />
             )}
-            <input
-              type="datetime-local"
-              value={dueAt}
-              onChange={(event) => setDueAt(event.target.value)}
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
-            />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="grid gap-1 text-xs text-slate-300">
+                <span>Due date</span>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                  className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                />
+              </label>
+              <label className="grid gap-1 text-xs text-slate-300">
+                <span>Due time</span>
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(event) => setDueTime(event.target.value)}
+                  className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                />
+              </label>
+            </div>
             <textarea
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
@@ -615,7 +636,7 @@ export default function CaptainPage() {
             <button
               type="submit"
               disabled={isCreatingAssignment}
-              className="rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950"
+              className="cursor-pointer rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isCreatingAssignment ? "Creating..." : "Create Assignment"}
             </button>
