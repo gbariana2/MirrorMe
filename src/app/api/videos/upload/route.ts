@@ -20,8 +20,8 @@ function assertKind(value: FormDataEntryValue | null): VideoKind {
 
 export async function POST(request: Request) {
   try {
-    await getRequiredUserId();
     const formData = await request.formData();
+    await getRequiredUserId(formData.get("userId"));
     const kind = assertKind(formData.get("kind"));
     const file = assertVideoFile(formData.get("video"), "Video");
     const title = getTitle(

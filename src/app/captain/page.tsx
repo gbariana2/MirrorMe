@@ -276,6 +276,9 @@ export default function CaptainPage() {
         }
 
         const uploadForm = new FormData();
+        if (userId) {
+          uploadForm.append("userId", userId);
+        }
         uploadForm.append("kind", "reference");
         uploadForm.append("title", `${assignmentTitle} reference`);
         uploadForm.append("video", referenceFile);
@@ -300,6 +303,7 @@ export default function CaptainPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            userId: userId ?? undefined,
             url: youtubeUrl,
             title: `${assignmentTitle} reference`,
           }),

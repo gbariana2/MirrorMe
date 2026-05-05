@@ -6,14 +6,15 @@ import { assertNonEmptyString, HttpError } from "@/lib/team";
 import { extractYouTubeVideoId } from "@/lib/youtube";
 
 type Payload = {
+  userId?: string;
   url: string;
   title?: string;
 };
 
 export async function POST(request: Request) {
   try {
-    await getRequiredUserId();
     const payload = (await request.json()) as Partial<Payload>;
+    await getRequiredUserId(payload.userId);
     const url = assertNonEmptyString(payload.url, "url", 2000);
     const videoId = extractYouTubeVideoId(url);
 
