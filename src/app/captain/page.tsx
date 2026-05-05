@@ -74,6 +74,7 @@ export default function CaptainPage() {
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
 
   const captainTeams = useMemo(() => teams.filter((item) => item.role === "captain"), [teams]);
   const filteredAssignments = useMemo(() => {
@@ -263,75 +264,83 @@ export default function CaptainPage() {
       setError("Select a captain team first.");
       return;
     }
-    setError(null);
-    let referenceVideoId = "";
+    setIsCreatingAssignment(true);
+    try {
+      setError(null);
+      let referenceVideoId = "";
 
-    if (referenceSource === "upload") {
-      if (!referenceFile) {
-        setError("Upload a reference video for this assignment.");
-        return;
+      if (referenceSource === "upload") {
+        if (!referenceFile) {
+          setError("Upload a reference video for this assignment.");
+          return;
+        }
+
+        const uploadForm = new FormData();
+        uploadForm.append("kind", "reference");
+        uploadForm.append("title", `${assignmentTitle} reference`);
+        uploadForm.append("video", referenceFile);
+
+        const uploadResponse = await fetch("/api/videos/upload", {
+          method: "POST",
+          body: uploadForm,
+        });
+        const uploadPayload = await readJsonSafe<{ videoId?: string; error?: string }>(uploadResponse);
+        if (!uploadResponse.ok || !uploadPayload?.videoId) {
+          setError(formatHttpError(uploadResponse, "Failed to upload reference video.", uploadPayload?.error));
+          return;
+        }
+        referenceVideoId = uploadPayload.videoId;
+      } else {
+        if (!youtubeUrl.trim()) {
+          setError("Provide a YouTube URL for this assignment.");
+          return;
+        }
+
+        const youtubeResponse = await fetch("/api/videos/youtube-reference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: youtubeUrl,
+            title: `${assignmentTitle} reference`,
+          }),
+        });
+        const youtubePayload = await readJsonSafe<{ videoId?: string; error?: string }>(youtubeResponse);
+        if (!youtubeResponse.ok || !youtubePayload?.videoId) {
+          setError(formatHttpError(youtubeResponse, "Failed to attach YouTube reference.", youtubePayload?.error));
+          return;
+        }
+        referenceVideoId = youtubePayload.videoId;
       }
 
-      const uploadForm = new FormData();
-      uploadForm.append("kind", "reference");
-      uploadForm.append("title", `${assignmentTitle} reference`);
-      uploadForm.append("video", referenceFile);
-
-      const uploadResponse = await fetch("/api/videos/upload", {
-        method: "POST",
-        body: uploadForm,
-      });
-      const uploadPayload = (await uploadResponse.json()) as { videoId?: string; error?: string };
-      if (!uploadResponse.ok || !uploadPayload.videoId) {
-        setError(uploadPayload.error ?? "Failed to upload reference video.");
-        return;
-      }
-      referenceVideoId = uploadPayload.videoId;
-    } else {
-      if (!youtubeUrl.trim()) {
-        setError("Provide a YouTube URL for this assignment.");
-        return;
-      }
-
-      const youtubeResponse = await fetch("/api/videos/youtube-reference", {
+      const response = await fetch(`/api/teams/${selectedTeamId}/assignments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: youtubeUrl,
-          title: `${assignmentTitle} reference`,
+          captainUserId: userId ?? undefined,
+          title: assignmentTitle,
+          referenceVideoId,
+          dueAt,
+          instructions,
+          assigneeUserIds: selectedAssignees,
         }),
       });
-      const youtubePayload = (await youtubeResponse.json()) as { videoId?: string; error?: string };
-      if (!youtubeResponse.ok || !youtubePayload.videoId) {
-        setError(youtubePayload.error ?? "Failed to attach YouTube reference.");
+      const payload = await readJsonSafe<{ error?: string }>(response);
+      if (!response.ok) {
+        setError(formatHttpError(response, "Failed to create assignment.", payload?.error));
         return;
       }
-      referenceVideoId = youtubePayload.videoId;
+      setAssignmentTitle("");
+      setReferenceFile(null);
+      setYoutubeUrl("");
+      setDueAt("");
+      setInstructions("");
+      setSelectedAssignees([]);
+      await loadAssignments(selectedTeamId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to create assignment.");
+    } finally {
+      setIsCreatingAssignment(false);
     }
-
-    const response = await fetch(`/api/teams/${selectedTeamId}/assignments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: assignmentTitle,
-        referenceVideoId,
-        dueAt,
-        instructions,
-        assigneeUserIds: selectedAssignees,
-      }),
-    });
-    const payload = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setError(payload.error ?? "Failed to create assignment.");
-      return;
-    }
-    setAssignmentTitle("");
-    setReferenceFile(null);
-    setYoutubeUrl("");
-    setDueAt("");
-    setInstructions("");
-    setSelectedAssignees([]);
-    await loadAssignments(selectedTeamId);
   }
 
   async function copyJoinCode(code: string) {
@@ -601,9 +610,10 @@ export default function CaptainPage() {
             </div>
             <button
               type="submit"
+              disabled={isCreatingAssignment}
               className="rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950"
             >
-              Create Assignment
+              {isCreatingAssignment ? "Creating..." : "Create Assignment"}
             </button>
           </form>
 
