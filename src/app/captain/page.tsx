@@ -76,6 +76,7 @@ export default function CaptainPage() {
   const [instructions, setInstructions] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
+  const [assignmentProgress, setAssignmentProgress] = useState<string | null>(null);
 
   const captainTeams = useMemo(() => teams.filter((item) => item.role === "captain"), [teams]);
   const filteredAssignments = useMemo(() => {
@@ -93,6 +94,19 @@ export default function CaptainPage() {
       return (await response.json()) as T;
     } catch {
       return null;
+    }
+  }
+
+  async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 45000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -266,6 +280,7 @@ export default function CaptainPage() {
       return;
     }
     setIsCreatingAssignment(true);
+    setAssignmentProgress("Validating assignment details...");
     try {
       setError(null);
       if (!dueDate || !dueTime) {
@@ -289,7 +304,8 @@ export default function CaptainPage() {
         uploadForm.append("title", `${assignmentTitle} reference`);
         uploadForm.append("video", referenceFile);
 
-        const uploadResponse = await fetch("/api/videos/upload", {
+        setAssignmentProgress("Uploading reference video...");
+        const uploadResponse = await fetchWithTimeout("/api/videos/upload", {
           method: "POST",
           body: uploadForm,
         });
@@ -305,7 +321,8 @@ export default function CaptainPage() {
           return;
         }
 
-        const youtubeResponse = await fetch("/api/videos/youtube-reference", {
+        setAssignmentProgress("Attaching YouTube reference...");
+        const youtubeResponse = await fetchWithTimeout("/api/videos/youtube-reference", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -322,7 +339,8 @@ export default function CaptainPage() {
         referenceVideoId = youtubePayload.videoId;
       }
 
-      const response = await fetch(`/api/teams/${selectedTeamId}/assignments`, {
+      setAssignmentProgress("Creating assignment...");
+      const response = await fetchWithTimeout(`/api/teams/${selectedTeamId}/assignments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -347,10 +365,18 @@ export default function CaptainPage() {
       setInstructions("");
       setSelectedAssignees([]);
       await loadAssignments(selectedTeamId);
+      setAssignmentProgress("Assignment created.");
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Failed to create assignment.");
+      const message =
+        caughtError instanceof Error && caughtError.name === "AbortError"
+          ? "Request timed out. Try a smaller video or retry."
+          : caughtError instanceof Error
+            ? caughtError.message
+            : "Failed to create assignment.";
+      setError(message);
     } finally {
       setIsCreatingAssignment(false);
+      setAssignmentProgress(null);
     }
   }
 
@@ -640,6 +666,7 @@ export default function CaptainPage() {
             >
               {isCreatingAssignment ? "Creating..." : "Create Assignment"}
             </button>
+            {assignmentProgress ? <p className="text-xs text-slate-300">{assignmentProgress}</p> : null}
           </form>
 
           <div className="mt-6 space-y-3">
