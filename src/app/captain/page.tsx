@@ -61,6 +61,7 @@ export default function CaptainPage() {
   const [isHealthLoading, setIsHealthLoading] = useState(false);
   const [isBootstrapRunning, setIsBootstrapRunning] = useState(false);
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
+  const [isAdminToolsOpen, setIsAdminToolsOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [seedCount, setSeedCount] = useState(8);
   const [assignmentFilter, setAssignmentFilter] = useState<"active" | "archived" | "all">("active");
@@ -364,31 +365,41 @@ export default function CaptainPage() {
           <p className="mt-2 text-sm text-slate-300">Create teams and publish assignment deadlines.</p>
 
           <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">System health</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Admin tools</p>
               <button
                 type="button"
-                onClick={() => {
-                  void loadHealth();
-                }}
-                disabled={isHealthLoading}
-                className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                onClick={() => setIsAdminToolsOpen((current) => !current)}
+                className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200"
               >
-                {isHealthLoading ? "Checking..." : "Refresh"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void runSetupFix();
-                }}
-                disabled={isBootstrapRunning}
-                className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
-              >
-                {isBootstrapRunning ? "Running setup..." : "Run setup fix"}
+                {isAdminToolsOpen ? "Hide" : "Show"}
               </button>
             </div>
-            {health ? (
+
+            {isAdminToolsOpen && health ? (
               <div className="mt-3 grid gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void loadHealth();
+                    }}
+                    disabled={isHealthLoading}
+                    className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                  >
+                    {isHealthLoading ? "Checking..." : "Refresh"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void runSetupFix();
+                    }}
+                    disabled={isBootstrapRunning}
+                    className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                  >
+                    {isBootstrapRunning ? "Running setup..." : "Run setup fix"}
+                  </button>
+                </div>
                 {[
                   { label: "Database", value: health.checks.database },
                   { label: "Storage", value: health.checks.storage },
@@ -421,9 +432,9 @@ export default function CaptainPage() {
                 </p>
                 {bootstrapMessage ? <p className="text-[11px] text-slate-300">{bootstrapMessage}</p> : null}
               </div>
-            ) : (
+            ) : isAdminToolsOpen ? (
               <p className="mt-2 text-xs text-slate-400">No health data loaded yet.</p>
-            )}
+            ) : null}
           </div>
 
           <form className="mt-6 grid gap-3" onSubmit={handleCreateTeam}>
