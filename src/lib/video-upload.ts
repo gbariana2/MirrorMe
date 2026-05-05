@@ -2,7 +2,7 @@ import { buildVideoPath } from "@/lib/uploads";
 import { VIDEO_BUCKET } from "@/lib/supabase/constants";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 250 * 1024 * 1024;
 const ALLOWED_VIDEO_MIME_TYPES = new Set([
   "video/mp4",
   "video/quicktime",
@@ -47,7 +47,7 @@ export function assertVideoFile(file: FormDataEntryValue | null, label: string) 
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    throw new UploadHttpError(`${label} must be smaller than 100 MB.`, 400);
+    throw new UploadHttpError(`${label} must be smaller than 250 MB.`, 400);
   }
 
   return file;

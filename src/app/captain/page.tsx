@@ -77,6 +77,8 @@ export default function CaptainPage() {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
   const [assignmentProgress, setAssignmentProgress] = useState<string | null>(null);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [uploadEtaSeconds, setUploadEtaSeconds] = useState<number | null>(null);
 
   const captainTeams = useMemo(() => teams.filter((item) => item.role === "captain"), [teams]);
   const filteredAssignments = useMemo(() => {
@@ -108,6 +110,59 @@ export default function CaptainPage() {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  function uploadWithProgress(url: string, formData: FormData, timeoutMs = 180000) {
+    return new Promise<Response>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      const startedAt = Date.now();
+      const timer = setTimeout(() => {
+        request.abort();
+        reject(new Error("Upload timed out."));
+      }, timeoutMs);
+
+      request.open("POST", url);
+      request.responseType = "text";
+
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          return;
+        }
+        const percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        setUploadPercent(percent);
+
+        const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+        const bytesPerSecond = event.loaded / elapsedSeconds;
+        if (bytesPerSecond > 0) {
+          const remainingBytes = event.total - event.loaded;
+          setUploadEtaSeconds(Math.max(0, Math.round(remainingBytes / bytesPerSecond)));
+        }
+      };
+
+      request.onload = () => {
+        clearTimeout(timer);
+        const response = new Response(request.responseText ?? "", {
+          status: request.status,
+          statusText: request.statusText,
+          headers: {
+            "Content-Type": request.getResponseHeader("Content-Type") ?? "application/json",
+          },
+        });
+        resolve(response);
+      };
+
+      request.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("Upload failed."));
+      };
+
+      request.onabort = () => {
+        clearTimeout(timer);
+        reject(new Error("Upload was aborted."));
+      };
+
+      request.send(formData);
+    });
   }
 
   function formatHttpError(response: Response, fallback: string, apiError?: string) {
@@ -281,6 +336,8 @@ export default function CaptainPage() {
     }
     setIsCreatingAssignment(true);
     setAssignmentProgress("Validating assignment details...");
+    setUploadPercent(null);
+    setUploadEtaSeconds(null);
     try {
       setError(null);
       if (!dueDate || !dueTime) {
@@ -305,15 +362,14 @@ export default function CaptainPage() {
         uploadForm.append("video", referenceFile);
 
         setAssignmentProgress("Uploading reference video...");
-        const uploadResponse = await fetchWithTimeout("/api/videos/upload", {
-          method: "POST",
-          body: uploadForm,
-        });
+        const uploadResponse = await uploadWithProgress("/api/videos/upload", uploadForm);
         const uploadPayload = await readJsonSafe<{ videoId?: string; error?: string }>(uploadResponse);
         if (!uploadResponse.ok || !uploadPayload?.videoId) {
           setError(formatHttpError(uploadResponse, "Failed to upload reference video.", uploadPayload?.error));
           return;
         }
+        setUploadPercent(100);
+        setUploadEtaSeconds(0);
         referenceVideoId = uploadPayload.videoId;
       } else {
         if (!youtubeUrl.trim()) {
@@ -368,7 +424,7 @@ export default function CaptainPage() {
       setAssignmentProgress("Assignment created.");
     } catch (caughtError) {
       const message =
-        caughtError instanceof Error && caughtError.name === "AbortError"
+        caughtError instanceof Error && (caughtError.name === "AbortError" || caughtError.message.includes("timed out"))
           ? "Request timed out. Try a smaller video or retry."
           : caughtError instanceof Error
             ? caughtError.message
@@ -377,6 +433,8 @@ export default function CaptainPage() {
     } finally {
       setIsCreatingAssignment(false);
       setAssignmentProgress(null);
+      setUploadPercent(null);
+      setUploadEtaSeconds(null);
     }
   }
 
@@ -667,6 +725,19 @@ export default function CaptainPage() {
               {isCreatingAssignment ? "Creating..." : "Create Assignment"}
             </button>
             {assignmentProgress ? <p className="text-xs text-slate-300">{assignmentProgress}</p> : null}
+            {uploadPercent !== null ? (
+              <div className="space-y-1">
+                <div className="h-2 overflow-hidden rounded-full bg-[#1d233a]">
+                  <div
+                    className="h-full bg-[#2fa8ff] transition-all"
+                    style={{ width: `${uploadPercent}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-300">
+                  Upload {uploadPercent}%{uploadEtaSeconds !== null ? ` • ~${uploadEtaSeconds}s remaining` : ""}
+                </p>
+              </div>
+            ) : null}
           </form>
 
           <div className="mt-6 space-y-3">
