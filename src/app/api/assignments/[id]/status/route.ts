@@ -66,9 +66,21 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const dancerUserIds = (targets ?? []).map((item) => item.dancer_user_id);
+    const baseSummary = {
+      not_submitted: 0,
+      submitted: 0,
+      processing: 0,
+      analyzed: 0,
+      failed: 0,
+    };
 
     if (dancerUserIds.length === 0) {
-      return NextResponse.json({ assignment, assignees: [] });
+      return NextResponse.json({
+        assignment,
+        assignees: [],
+        summary: baseSummary,
+        teamDancerUserIds: (teamDancers ?? []).map((row) => row.user_id),
+      });
     }
 
     const { data: submissions, error: submissionsError } = await supabase
@@ -128,13 +140,7 @@ export async function GET(request: Request, context: RouteContext) {
         acc[assignee.status] += 1;
         return acc;
       },
-      {
-        not_submitted: 0,
-        submitted: 0,
-        processing: 0,
-        analyzed: 0,
-        failed: 0,
-      },
+      baseSummary,
     );
 
     return NextResponse.json({

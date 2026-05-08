@@ -286,6 +286,14 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
               ) : null}
             </article>
           ))}
+          {statusData && statusData.assignees.length === 0 ? (
+            <article className="rounded-xl border border-dashed border-white/20 bg-[#121527] p-4">
+              <p className="text-sm font-semibold text-white">No assignees yet</p>
+              <p className="mt-1 text-xs text-slate-300">
+                This assignment has no assigned dancers. Add dancers in the edit section above.
+              </p>
+            </article>
+          ) : null}
         </div>
 
         {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
