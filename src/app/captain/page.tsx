@@ -112,8 +112,12 @@ export default function CaptainPage() {
     }
   }
 
-  function uploadWithProgress(url: string, formData: FormData, timeoutMs = 180000) {
-    return new Promise<Response>((resolve, reject) => {
+  function uploadFileToSignedUrl(
+    signedUrl: string,
+    file: File,
+    timeoutMs = 180000,
+  ) {
+    return new Promise<void>((resolve, reject) => {
       const request = new XMLHttpRequest();
       const startedAt = Date.now();
       const timer = setTimeout(() => {
@@ -121,8 +125,9 @@ export default function CaptainPage() {
         reject(new Error("Upload timed out."));
       }, timeoutMs);
 
-      request.open("POST", url);
-      request.responseType = "text";
+      request.open("PUT", signedUrl);
+      request.setRequestHeader("x-upsert", "false");
+      request.setRequestHeader("Content-Type", file.type);
 
       request.upload.onprogress = (event) => {
         if (!event.lengthComputable) {
@@ -141,19 +146,16 @@ export default function CaptainPage() {
 
       request.onload = () => {
         clearTimeout(timer);
-        const response = new Response(request.responseText ?? "", {
-          status: request.status,
-          statusText: request.statusText,
-          headers: {
-            "Content-Type": request.getResponseHeader("Content-Type") ?? "application/json",
-          },
-        });
-        resolve(response);
+        if (request.status >= 200 && request.status < 300) {
+          resolve();
+          return;
+        }
+        reject(new Error(`Storage upload failed (HTTP ${request.status}).`));
       };
 
       request.onerror = () => {
         clearTimeout(timer);
-        reject(new Error("Upload failed."));
+        reject(new Error("Storage upload failed."));
       };
 
       request.onabort = () => {
@@ -161,7 +163,7 @@ export default function CaptainPage() {
         reject(new Error("Upload was aborted."));
       };
 
-      request.send(formData);
+      request.send(file);
     });
   }
 
@@ -362,15 +364,77 @@ export default function CaptainPage() {
         uploadForm.append("video", referenceFile);
 
         setAssignmentProgress("Uploading reference video...");
-        const uploadResponse = await uploadWithProgress("/api/videos/upload", uploadForm);
-        const uploadPayload = await readJsonSafe<{ videoId?: string; error?: string }>(uploadResponse);
-        if (!uploadResponse.ok || !uploadPayload?.videoId) {
-          setError(formatHttpError(uploadResponse, "Failed to upload reference video.", uploadPayload?.error));
+        const prepareResponse = await fetchWithTimeout(
+          "/api/videos/upload-url",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: userId ?? undefined,
+              kind: "reference",
+              filename: referenceFile.name,
+              mimeType: referenceFile.type,
+            }),
+          },
+          30000,
+        );
+        const preparePayload = await readJsonSafe<{
+          bucket?: string;
+          path?: string;
+          token?: string;
+          signedUrl?: string;
+          error?: string;
+        }>(
+          prepareResponse,
+        );
+        if (
+          !prepareResponse.ok
+          || !preparePayload?.path
+          || !preparePayload.token
+          || !preparePayload.bucket
+          || !preparePayload.signedUrl
+        ) {
+          setError(
+            formatHttpError(
+              prepareResponse,
+              "Failed to prepare reference upload.",
+              preparePayload?.error,
+            ),
+          );
+          return;
+        }
+
+        await uploadFileToSignedUrl(preparePayload.signedUrl, referenceFile);
+
+        const finalizeResponse = await fetchWithTimeout(
+          "/api/videos/finalize-upload",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: userId ?? undefined,
+              kind: "reference",
+              title: `${assignmentTitle} reference`,
+              path: preparePayload.path,
+              mimeType: referenceFile.type,
+            }),
+          },
+          30000,
+        );
+        const finalizePayload = await readJsonSafe<{ videoId?: string; error?: string }>(finalizeResponse);
+        if (!finalizeResponse.ok || !finalizePayload?.videoId) {
+          setError(
+            formatHttpError(
+              finalizeResponse,
+              "Failed to finalize uploaded reference video.",
+              finalizePayload?.error,
+            ),
+          );
           return;
         }
         setUploadPercent(100);
         setUploadEtaSeconds(0);
-        referenceVideoId = uploadPayload.videoId;
+        referenceVideoId = finalizePayload.videoId;
       } else {
         if (!youtubeUrl.trim()) {
           setError("Provide a YouTube URL for this assignment.");
@@ -677,7 +741,7 @@ export default function CaptainPage() {
                   type="date"
                   value={dueDate}
                   onChange={(event) => setDueDate(event.target.value)}
-                  className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
                 />
               </label>
               <label className="grid gap-1 text-xs text-slate-300">
@@ -686,7 +750,7 @@ export default function CaptainPage() {
                   type="time"
                   value={dueTime}
                   onChange={(event) => setDueTime(event.target.value)}
-                  className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
                 />
               </label>
             </div>
