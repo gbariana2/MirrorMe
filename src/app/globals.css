@@ -33,3 +33,42 @@ body {
 .soft-panel {
   background: linear-gradient(160deg, rgba(17, 20, 30, 0.95), rgba(10, 12, 18, 0.95));
 }
+
+.captain-datetime {
+  color: #ffffff;
+  color-scheme: dark;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.captain-datetime::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.8) contrast(1.2) !important;
+  opacity: 1 !important;
+  cursor: pointer;
+}
+
+.captain-datetime[type="date"]::-webkit-calendar-picker-indicator,
+.captain-datetime[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.8) contrast(1.2) !important;
+  opacity: 1 !important;
+}
+
+.captain-datetime::-webkit-datetime-edit {
+  color: #ffffff;
+}
+
+.captain-datetime::-webkit-datetime-edit-fields-wrapper {
+  color: #ffffff;
+}
+
+.captain-datetime::-webkit-datetime-edit-text {
+  color: #cbd5e1;
+}
+
+.captain-datetime::-webkit-date-and-time-value {
+  color: #ffffff;
+}
+
+.captain-datetime::-moz-focus-inner {
+  border: 0;
+}
