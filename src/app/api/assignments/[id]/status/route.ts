@@ -54,14 +54,40 @@ export async function GET(request: Request, context: RouteContext) {
       throw targetsError;
     }
 
-    const { data: teamMembers, error: teamMembersError } = await supabase
-      .from("team_memberships")
-      .select("user_id, role, display_name")
-      .eq("team_id", assignment.team_id)
-      .order("created_at", { ascending: true });
+    let teamMemberOptions: Array<{ userId: string; role: string; displayName: string | null }> = [];
+    {
+      const { data: teamMembersWithNames, error: teamMembersWithNamesError } = await supabase
+        .from("team_memberships")
+        .select("user_id, role, display_name")
+        .eq("team_id", assignment.team_id)
+        .order("created_at", { ascending: true });
 
-    if (teamMembersError) {
-      throw teamMembersError;
+      if (teamMembersWithNamesError) {
+        // Backward compatibility: allow deployments where display_name migration has not been applied yet.
+        if (teamMembersWithNamesError.message.includes("display_name")) {
+          const { data: teamMembersFallback, error: teamMembersFallbackError } = await supabase
+            .from("team_memberships")
+            .select("user_id, role")
+            .eq("team_id", assignment.team_id)
+            .order("created_at", { ascending: true });
+          if (teamMembersFallbackError) {
+            throw teamMembersFallbackError;
+          }
+          teamMemberOptions = (teamMembersFallback ?? []).map((row) => ({
+            userId: row.user_id,
+            role: row.role,
+            displayName: null,
+          }));
+        } else {
+          throw teamMembersWithNamesError;
+        }
+      } else {
+        teamMemberOptions = (teamMembersWithNames ?? []).map((row) => ({
+          userId: row.user_id,
+          role: row.role,
+          displayName: row.display_name,
+        }));
+      }
     }
 
     const dancerUserIds = (targets ?? []).map((item) => item.dancer_user_id);
@@ -79,11 +105,7 @@ export async function GET(request: Request, context: RouteContext) {
         assignment,
         assignees: [],
         summary: baseSummary,
-        teamMemberOptions: (teamMembers ?? []).map((row) => ({
-          userId: row.user_id,
-          role: row.role,
-          displayName: row.display_name,
-        })),
+        teamMemberOptions,
       });
     }
 
@@ -153,11 +175,7 @@ export async function GET(request: Request, context: RouteContext) {
       assignment,
       assignees,
       summary,
-      teamMemberOptions: (teamMembers ?? []).map((row) => ({
-        userId: row.user_id,
-        role: row.role,
-        displayName: row.display_name,
-      })),
+      teamMemberOptions,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load assignment status.";
