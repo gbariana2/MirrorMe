@@ -36,7 +36,60 @@ function DancerDashboard() {
   const [joinCode, setJoinCode] = useState("");
   const [submissionFiles, setSubmissionFiles] = useState<Record<string, File | null>>({});
   const [reviewLinks, setReviewLinks] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
+  const [submitProgress, setSubmitProgress] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  async function readJsonSafe<T>(response: Response) {
+    try {
+      return (await response.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 45000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function uploadFileToSignedUrl(signedUrl: string, file: File, timeoutMs = 180000) {
+    return new Promise<void>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      const timer = setTimeout(() => {
+        request.abort();
+        reject(new Error("Upload timed out."));
+      }, timeoutMs);
+
+      request.open("PUT", signedUrl);
+      request.setRequestHeader("x-upsert", "false");
+      request.setRequestHeader("Content-Type", file.type);
+
+      request.onload = () => {
+        clearTimeout(timer);
+        if (request.status >= 200 && request.status < 300) {
+          resolve();
+          return;
+        }
+        reject(new Error(`Storage upload failed (HTTP ${request.status}).`));
+      };
+      request.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("Storage upload failed."));
+      };
+      request.onabort = () => {
+        clearTimeout(timer);
+        reject(new Error("Upload was aborted."));
+      };
+
+      request.send(file);
+    });
+  }
 
   async function loadTeams() {
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
@@ -118,38 +171,93 @@ function DancerDashboard() {
       return;
     }
 
-    setError(null);
-    const uploadForm = new FormData();
-    uploadForm.append("kind", "submission");
-    uploadForm.append("title", `Assignment ${assignmentId} submission`);
-    uploadForm.append("video", submissionFile);
+    setIsSubmitting((current) => ({ ...current, [assignmentId]: true }));
+    setSubmitProgress((current) => ({ ...current, [assignmentId]: "Preparing upload..." }));
+    try {
+      setError(null);
 
-    const uploadResponse = await fetch("/api/videos/upload", {
-      method: "POST",
-      body: uploadForm,
-    });
-    const uploadPayload = (await uploadResponse.json()) as { videoId?: string; error?: string };
-    if (!uploadResponse.ok || !uploadPayload.videoId) {
-      setError(uploadPayload.error ?? "Failed to upload submission video.");
-      return;
+      const prepareResponse = await fetchWithTimeout(
+        "/api/videos/upload-url",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: userId ?? undefined,
+            kind: "submission",
+            filename: submissionFile.name,
+            mimeType: submissionFile.type,
+          }),
+        },
+        30000,
+      );
+      const preparePayload = await readJsonSafe<{
+        bucket?: string;
+        path?: string;
+        token?: string;
+        signedUrl?: string;
+        error?: string;
+      }>(prepareResponse);
+
+      if (!prepareResponse.ok || !preparePayload?.path || !preparePayload.signedUrl) {
+        setError(preparePayload?.error ?? "Failed to prepare submission upload.");
+        return;
+      }
+
+      setSubmitProgress((current) => ({ ...current, [assignmentId]: "Uploading submission..." }));
+      await uploadFileToSignedUrl(preparePayload.signedUrl, submissionFile);
+
+      setSubmitProgress((current) => ({ ...current, [assignmentId]: "Finalizing upload..." }));
+      const finalizeResponse = await fetchWithTimeout(
+        "/api/videos/finalize-upload",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: userId ?? undefined,
+            kind: "submission",
+            title: `Assignment ${assignmentId} submission`,
+            path: preparePayload.path,
+            mimeType: submissionFile.type,
+          }),
+        },
+        30000,
+      );
+      const finalizePayload = await readJsonSafe<{ videoId?: string; error?: string }>(finalizeResponse);
+      if (!finalizeResponse.ok || !finalizePayload?.videoId) {
+        setError(finalizePayload?.error ?? "Failed to finalize submission upload.");
+        return;
+      }
+
+      setSubmitProgress((current) => ({ ...current, [assignmentId]: "Submitting for analysis..." }));
+      const response = await fetchWithTimeout(
+        `/api/assignments/${assignmentId}/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dancerUserId: userId ?? undefined,
+            submissionVideoId: finalizePayload.videoId,
+          }),
+        },
+        45000,
+      );
+
+      const payload = await readJsonSafe<SubmissionResponse | { error: string }>(response);
+      if (!response.ok || !payload || "error" in payload) {
+        setError(payload && "error" in payload ? payload.error : "Failed to submit assignment.");
+        return;
+      }
+
+      setReviewLinks((current) => ({
+        ...current,
+        [assignmentId]: payload.reviewPath,
+      }));
+      setSubmitProgress((current) => ({ ...current, [assignmentId]: "Submitted." }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to submit assignment.");
+    } finally {
+      setIsSubmitting((current) => ({ ...current, [assignmentId]: false }));
     }
-
-    const response = await fetch(`/api/assignments/${assignmentId}/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ submissionVideoId: uploadPayload.videoId }),
-    });
-
-    const payload = (await response.json()) as SubmissionResponse | { error: string };
-    if (!response.ok || "error" in payload) {
-      setError("error" in payload ? payload.error : "Failed to submit assignment.");
-      return;
-    }
-
-    setReviewLinks((current) => ({
-      ...current,
-      [assignmentId]: payload.reviewPath,
-    }));
   }
 
   return (
@@ -221,11 +329,15 @@ function DancerDashboard() {
                   <button
                     type="button"
                     onClick={() => submitAssignment(assignment.id)}
-                    className="rounded-full bg-[#2fa8ff] px-4 py-2 text-xs font-bold text-slate-950"
+                    disabled={isSubmitting[assignment.id] || !submissionFiles[assignment.id]}
+                    className="rounded-full bg-[#2fa8ff] px-4 py-2 text-xs font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Submit
+                    {isSubmitting[assignment.id] ? "Submitting..." : "Submit"}
                   </button>
                 </div>
+                {submitProgress[assignment.id] ? (
+                  <p className="mt-2 text-xs text-slate-300">{submitProgress[assignment.id]}</p>
+                ) : null}
                 {reviewLinks[assignment.id] ? (
                   <Link
                     href={reviewLinks[assignment.id] ?? "#"}
