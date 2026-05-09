@@ -183,8 +183,17 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
             <Link href="/captain" className="text-sm font-semibold text-[#8fd4ff] underline">
               Back to captain dashboard
             </Link>
+            <Link href="/" className="text-sm font-semibold text-[#8fd4ff] underline">
+              Home
+            </Link>
           </div>
         </div>
+
+        {!statusData && !error ? (
+          <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
+            <p className="text-sm text-slate-300">Loading assignment details...</p>
+          </div>
+        ) : null}
 
         {statusData ? (
           <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">

@@ -529,7 +529,12 @@ export default function CaptainPage() {
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
         <section className="rounded-3xl border border-white/15 soft-panel p-6">
-          <h1 className="text-2xl font-bold text-white">Captain Dashboard</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-white">Captain Dashboard</h1>
+            <Link href="/" className="text-sm font-semibold text-[#8fd4ff] underline">
+              Back to home
+            </Link>
+          </div>
           <p className="mt-2 text-sm text-slate-300">Create teams and publish assignment deadlines.</p>
 
           <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
@@ -737,21 +742,27 @@ export default function CaptainPage() {
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="grid gap-1 text-xs text-slate-300">
                 <span>Due date</span>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(event) => setDueDate(event.target.value)}
+                    className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 pr-11 text-sm outline-none"
+                  />
+                  <span className="captain-input-icon" aria-hidden="true">📅</span>
+                </div>
               </label>
               <label className="grid gap-1 text-xs text-slate-300">
                 <span>Due time</span>
-                <input
-                  type="time"
-                  value={dueTime}
-                  onChange={(event) => setDueTime(event.target.value)}
-                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type="time"
+                    value={dueTime}
+                    onChange={(event) => setDueTime(event.target.value)}
+                    className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 pr-11 text-sm outline-none"
+                  />
+                  <span className="captain-input-icon" aria-hidden="true">🕒</span>
+                </div>
               </label>
             </div>
             <textarea
