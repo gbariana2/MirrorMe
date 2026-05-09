@@ -213,8 +213,7 @@ export default function CaptainPage() {
     if (!response.ok) {
       throw new Error(formatHttpError(response, "Failed to load members.", payload?.error));
     }
-    const dancers = (payload?.members ?? []).filter((member) => member.role === "dancer");
-    setMembers(dancers);
+    setMembers(payload?.members ?? []);
   }
 
   async function loadHealth() {
@@ -766,7 +765,7 @@ export default function CaptainPage() {
               className="min-h-24 rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
             />
             <div className="rounded-xl border border-white/20 bg-[#121527] p-3">
-              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-300">Assign dancers</p>
+              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-300">Assign team members</p>
               <div className="grid gap-2">
                 {members.map((member) => (
                   <label key={member.user_id} className="flex items-center gap-2 text-xs text-slate-200">
@@ -781,7 +780,10 @@ export default function CaptainPage() {
                         );
                       }}
                     />
-                    <span>{member.user_id}</span>
+                    <span>
+                      {member.user_id}{" "}
+                      <span className="text-slate-400">({member.role})</span>
+                    </span>
                   </label>
                 ))}
               </div>

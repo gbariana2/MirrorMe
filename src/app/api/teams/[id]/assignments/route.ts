@@ -155,20 +155,19 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const { data: dancers, error: dancersError } = await supabase
+    const { data: teamMembers, error: teamMembersError } = await supabase
       .from("team_memberships")
       .select("user_id")
       .eq("team_id", id)
-      .eq("role", "dancer")
       .in("user_id", assigneeUserIds);
 
-    if (dancersError) {
-      throw dancersError;
+    if (teamMembersError) {
+      throw teamMembersError;
     }
 
-    const validDancerIds = new Set((dancers ?? []).map((item) => item.user_id));
-    if (validDancerIds.size !== new Set(assigneeUserIds).size) {
-      return NextResponse.json({ error: "Some assignees are not team dancers." }, { status: 400 });
+    const validMemberIds = new Set((teamMembers ?? []).map((item) => item.user_id));
+    if (validMemberIds.size !== new Set(assigneeUserIds).size) {
+      return NextResponse.json({ error: "Some assignees are not team members." }, { status: 400 });
     }
 
     const { data: assignment, error: insertError } = await supabase

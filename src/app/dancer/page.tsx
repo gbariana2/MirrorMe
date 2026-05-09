@@ -294,7 +294,12 @@ function DancerDashboard() {
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
         <section className="rounded-3xl border border-white/15 soft-panel p-6">
-          <h1 className="text-2xl font-bold text-white">Dancer Dashboard</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-white">Dancer Dashboard</h1>
+            <Link href="/" className="text-sm font-semibold text-[#8fd4ff] underline">
+              Back to home
+            </Link>
+          </div>
           <p className="mt-2 text-sm text-slate-300">
             Join teams, open weekly assignments, and submit before deadline.
           </p>
