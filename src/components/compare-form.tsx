@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type CompareResponse =
   | {
@@ -22,6 +23,7 @@ function formatFileLabel(file: File | null) {
 }
 
 export function CompareForm() {
+  const router = useRouter();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [referenceTitle, setReferenceTitle] = useState("Reference choreography");
@@ -207,8 +209,9 @@ export function CompareForm() {
           return;
         }
 
-        setProgressLabel("Analysis created.");
+        setProgressLabel("Analysis created. Opening review...");
         setSuccess(data);
+        router.push(`${data.reviewPath}?autorun=1`);
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : "Upload failed.");
       }

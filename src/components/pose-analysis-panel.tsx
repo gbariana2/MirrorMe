@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DrawingUtils,
   FilesetResolver,
@@ -157,6 +158,7 @@ export function PoseAnalysisPanel({
   existingIssueCount,
   autoRun = false,
 }: PoseAnalysisPanelProps) {
+  const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -221,7 +223,7 @@ export function PoseAnalysisPanel({
           ? `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset and did not flag any major joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.`
           : `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.`;
 
-      const enqueueResponse = await fetch(`/api/analyses/${analysisId}/enqueue`, {
+      const processResponse = await fetch(`/api/analyses/${analysisId}/process`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -234,20 +236,10 @@ export function PoseAnalysisPanel({
           summary: nextSummary,
         }),
       });
-
-      const enqueuePayload = (await enqueueResponse.json()) as { error?: string };
-
-      if (!enqueueResponse.ok) {
-        throw new Error(enqueuePayload.error ?? "Failed to enqueue analysis.");
-      }
-
-      const processResponse = await fetch("/api/internal/analysis-jobs/process-next", {
-        method: "POST",
-      });
       const processPayload = (await processResponse.json()) as { error?: string };
 
       if (!processResponse.ok) {
-        throw new Error(processPayload.error ?? "Failed to process analysis job.");
+        throw new Error(processPayload.error ?? "Failed to process analysis.");
       }
 
       const mergedPreviews = referenceResult.previews.map((referencePreview, index) => ({
@@ -260,6 +252,7 @@ export function PoseAnalysisPanel({
       setIssueCount(comparison.issues.length);
       setScore(comparison.overallScore);
       setSummary(nextSummary);
+      router.refresh();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Pose analysis failed.");
     } finally {
