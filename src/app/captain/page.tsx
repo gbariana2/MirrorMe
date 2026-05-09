@@ -29,6 +29,7 @@ type TeamMember = {
   user_id: string;
   role: "captain" | "dancer";
   created_at: string;
+  display_name?: string | null;
 };
 
 type HealthResponse = {
@@ -75,6 +76,8 @@ export default function CaptainPage() {
   const [dueTime, setDueTime] = useState("");
   const [instructions, setInstructions] = useState("");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
   const [assignmentProgress, setAssignmentProgress] = useState<string | null>(null);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -501,6 +504,32 @@ export default function CaptainPage() {
     }
   }
 
+  async function handleSaveDisplayName(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedTeamId) {
+      setError("Select a team first.");
+      return;
+    }
+
+    setError(null);
+    const response = await fetch(`/api/teams/${selectedTeamId}/members`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userId ?? undefined,
+        firstName,
+        lastName,
+      }),
+    });
+    const payload = await readJsonSafe<{ error?: string }>(response);
+    if (!response.ok) {
+      setError(formatHttpError(response, "Failed to save profile name.", payload?.error));
+      return;
+    }
+
+    await loadMembers(selectedTeamId);
+  }
+
   async function copyJoinCode(code: string) {
     try {
       await navigator.clipboard.writeText(code);
@@ -621,6 +650,27 @@ export default function CaptainPage() {
               className="rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950"
             >
               Create Team
+            </button>
+          </form>
+
+          <form className="mt-4 grid gap-2 sm:grid-cols-3" onSubmit={handleSaveDisplayName}>
+            <input
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              placeholder="First name"
+              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-2 text-sm outline-none"
+            />
+            <input
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+              placeholder="Last name"
+              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-2 text-sm outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-full border border-white/25 px-4 py-2 text-xs font-semibold text-slate-200"
+            >
+              Save display name
             </button>
           </form>
 
@@ -781,7 +831,7 @@ export default function CaptainPage() {
                       }}
                     />
                     <span>
-                      {member.user_id}{" "}
+                      {member.display_name?.trim() ? member.display_name : member.user_id}{" "}
                       <span className="text-slate-400">({member.role})</span>
                     </span>
                   </label>

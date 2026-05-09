@@ -15,6 +15,12 @@ type JoinPayload = {
   joinCode: string;
 };
 
+type UpdateProfilePayload = {
+  userId?: string;
+  firstName: string;
+  lastName: string;
+};
+
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -38,7 +44,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const { data, error } = await supabase
       .from("team_memberships")
-      .select("user_id, role, created_at")
+      .select("user_id, role, created_at, display_name")
       .eq("team_id", id)
       .order("created_at", { ascending: true });
 
@@ -93,6 +99,47 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ teamId: id, userId, role: "dancer" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to join team.";
+    const status = error instanceof HttpError ? error.status : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+export async function PUT(request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const payload = (await request.json()) as Partial<UpdateProfilePayload>;
+    const userId = await getRequiredUserId(payload.userId);
+    const firstName = assertNonEmptyString(payload.firstName, "firstName", 60);
+    const lastName = assertNonEmptyString(payload.lastName, "lastName", 60);
+    const displayName = `${firstName} ${lastName}`.trim().slice(0, 120);
+    const supabase = createServerSupabaseClient();
+
+    const { data: membership, error: membershipError } = await supabase
+      .from("team_memberships")
+      .select("id")
+      .eq("team_id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (membershipError) {
+      throw membershipError;
+    }
+    if (!membership) {
+      return NextResponse.json({ error: "Team membership required." }, { status: 403 });
+    }
+
+    const { error: updateError } = await supabase
+      .from("team_memberships")
+      .update({ display_name: displayName })
+      .eq("id", membership.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return NextResponse.json({ teamId: id, userId, displayName });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update profile name.";
     const status = error instanceof HttpError ? error.status : 500;
     return NextResponse.json({ error: message }, { status });
   }
