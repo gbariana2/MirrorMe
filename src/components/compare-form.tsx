@@ -75,7 +75,10 @@ export function CompareForm() {
         const bytesPerSecond = event.loaded / elapsedSeconds;
         if (bytesPerSecond > 0) {
           const remainingBytes = event.total - event.loaded;
-          setUploadEtaSeconds(Math.max(0, Math.round(remainingBytes / bytesPerSecond)));
+          const rawEtaSeconds = Math.max(0, Math.round(remainingBytes / bytesPerSecond));
+          setUploadEtaSeconds((current) =>
+            current === null ? rawEtaSeconds : Math.max(0, Math.round(current * 0.7 + rawEtaSeconds * 0.3)),
+          );
         }
       };
 
@@ -137,6 +140,7 @@ export function CompareForm() {
         setUploadPercent(50);
 
         setProgressLabel("Finalizing reference...");
+        setUploadEtaSeconds(null);
         const refFinalizeResponse = await fetchWithTimeout("/api/videos/finalize-upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -154,6 +158,7 @@ export function CompareForm() {
         }
 
         setProgressLabel("Preparing dancer upload...");
+        setUploadEtaSeconds(null);
         const subPrepareResponse = await fetchWithTimeout("/api/videos/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -174,9 +179,10 @@ export function CompareForm() {
         setProgressLabel("Uploading dancer video...");
         await uploadFileToSignedUrl(subPreparePayload.signedUrl, submissionFile, 50);
         setUploadPercent(100);
-        setUploadEtaSeconds(0);
+        setUploadEtaSeconds(null);
 
         setProgressLabel("Finalizing dancer upload...");
+        setUploadEtaSeconds(null);
         const subFinalizeResponse = await fetchWithTimeout("/api/videos/finalize-upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -194,6 +200,7 @@ export function CompareForm() {
         }
 
         setProgressLabel("Creating analysis...");
+        setUploadEtaSeconds(null);
         const response = await fetchWithTimeout("/api/compare", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -300,7 +307,9 @@ export function CompareForm() {
                 </div>
                 <p className="mt-2 text-xs text-slate-300">
                   {uploadPercent}% complete
-                  {uploadEtaSeconds !== null && uploadEtaSeconds > 0 ? ` · ~${uploadEtaSeconds}s remaining` : ""}
+                  {progressLabel?.startsWith("Uploading") && uploadEtaSeconds !== null && uploadEtaSeconds > 0
+                    ? ` · ~${uploadEtaSeconds}s remaining`
+                    : ""}
                 </p>
               </>
             ) : null}

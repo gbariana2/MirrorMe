@@ -114,6 +114,7 @@ async function samplePoseFrames(
   video: HTMLVideoElement,
   poseLandmarker: PoseLandmarker,
   previewCanvas: HTMLCanvasElement,
+  inferenceTimestampBaseMs: number,
 ) {
   const frames: PoseFrame[] = [];
   const previews: Array<{ timestampMs: number; image: string }> = [];
@@ -123,7 +124,7 @@ async function samplePoseFrames(
     video.currentTime = timestampMs / 1000;
     await waitForEvent(video, "seeked");
 
-    const result = poseLandmarker.detectForVideo(video, timestampMs);
+    const result = poseLandmarker.detectForVideo(video, inferenceTimestampBaseMs + timestampMs);
     const landmarks = result.landmarks[0];
 
     if (!landmarks) {
@@ -210,11 +211,13 @@ export function PoseAnalysisPanel({
         referenceResource.video,
         poseLandmarker,
         previewCanvas,
+        0,
       );
       const submissionResult = await samplePoseFrames(
         submissionResource.video,
         poseLandmarker,
         previewCanvas,
+        MAX_ANALYSIS_DURATION_MS + SAMPLE_INTERVAL_MS,
       );
 
       const comparison = comparePoseFrames(referenceResult.frames, submissionResult.frames);

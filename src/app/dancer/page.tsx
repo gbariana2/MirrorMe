@@ -88,9 +88,13 @@ function DancerDashboard() {
         const bytesPerSecond = event.loaded / elapsedSeconds;
         if (bytesPerSecond > 0) {
           const remainingBytes = event.total - event.loaded;
+          const rawEtaSeconds = Math.max(0, Math.round(remainingBytes / bytesPerSecond));
           setUploadEtaSeconds((current) => ({
             ...current,
-            [assignmentId]: Math.max(0, Math.round(remainingBytes / bytesPerSecond)),
+            [assignmentId]:
+              current[assignmentId] === null || current[assignmentId] === undefined
+                ? rawEtaSeconds
+                : Math.max(0, Math.round((current[assignmentId] as number) * 0.7 + rawEtaSeconds * 0.3)),
           }));
         }
       };
@@ -234,7 +238,7 @@ function DancerDashboard() {
       setSubmitProgress((current) => ({ ...current, [assignmentId]: "Uploading submission..." }));
       await uploadFileToSignedUrl(assignmentId, preparePayload.signedUrl, submissionFile);
       setUploadPercent((current) => ({ ...current, [assignmentId]: 100 }));
-      setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: 0 }));
+      setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: null }));
 
       setSubmitProgress((current) => ({ ...current, [assignmentId]: "Finalizing upload..." }));
       const finalizeResponse = await fetchWithTimeout(
@@ -259,6 +263,7 @@ function DancerDashboard() {
       }
 
       setSubmitProgress((current) => ({ ...current, [assignmentId]: "Submitting for analysis..." }));
+      setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: null }));
       const response = await fetchWithTimeout(
         `/api/assignments/${assignmentId}/submit`,
         {
@@ -409,7 +414,9 @@ function DancerDashboard() {
                     </div>
                     <p className="text-xs text-slate-300">
                       Upload {uploadPercent[assignment.id]}%
-                      {uploadEtaSeconds[assignment.id] !== null && uploadEtaSeconds[assignment.id] !== undefined
+                      {submitProgress[assignment.id]?.startsWith("Uploading")
+                      && uploadEtaSeconds[assignment.id] !== null
+                      && uploadEtaSeconds[assignment.id] !== undefined
                         ? ` • ~${uploadEtaSeconds[assignment.id]}s remaining`
                         : ""}
                     </p>

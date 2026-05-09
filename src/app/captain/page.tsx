@@ -143,7 +143,10 @@ export default function CaptainPage() {
         const bytesPerSecond = event.loaded / elapsedSeconds;
         if (bytesPerSecond > 0) {
           const remainingBytes = event.total - event.loaded;
-          setUploadEtaSeconds(Math.max(0, Math.round(remainingBytes / bytesPerSecond)));
+          const rawEtaSeconds = Math.max(0, Math.round(remainingBytes / bytesPerSecond));
+          setUploadEtaSeconds((current) =>
+            current === null ? rawEtaSeconds : Math.max(0, Math.round(current * 0.7 + rawEtaSeconds * 0.3)),
+          );
         }
       };
 
@@ -407,6 +410,7 @@ export default function CaptainPage() {
         }
 
         await uploadFileToSignedUrl(preparePayload.signedUrl, referenceFile);
+        setUploadEtaSeconds(null);
 
         const finalizeResponse = await fetchWithTimeout(
           "/api/videos/finalize-upload",
@@ -435,7 +439,7 @@ export default function CaptainPage() {
           return;
         }
         setUploadPercent(100);
-        setUploadEtaSeconds(0);
+        setUploadEtaSeconds(null);
         referenceVideoId = finalizePayload.videoId;
       } else {
         if (!youtubeUrl.trim()) {
@@ -462,6 +466,7 @@ export default function CaptainPage() {
       }
 
       setAssignmentProgress("Creating assignment...");
+      setUploadEtaSeconds(null);
       const response = await fetchWithTimeout(`/api/teams/${selectedTeamId}/assignments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -855,7 +860,10 @@ export default function CaptainPage() {
                   />
                 </div>
                 <p className="text-xs text-slate-300">
-                  Upload {uploadPercent}%{uploadEtaSeconds !== null ? ` • ~${uploadEtaSeconds}s remaining` : ""}
+                  Upload {uploadPercent}%
+                  {assignmentProgress?.startsWith("Uploading") && uploadEtaSeconds !== null
+                    ? ` • ~${uploadEtaSeconds}s remaining`
+                    : ""}
                 </p>
               </div>
             ) : null}
