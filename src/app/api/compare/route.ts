@@ -1,33 +1,31 @@
 import { NextResponse } from "next/server";
 
-import {
-  assertVideoFile,
-  ensureVideoBucket,
-  getTitle,
-  uploadVideo,
-  UploadHttpError,
-} from "@/lib/video-upload";
+import { assertNonEmptyString, HttpError } from "@/lib/team";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const referenceFile = assertVideoFile(formData.get("referenceVideo"), "Reference video");
-    const submissionFile = assertVideoFile(formData.get("submissionVideo"), "Submission video");
-    const referenceTitle = getTitle(formData.get("referenceTitle"), "Reference choreography");
-    const submissionTitle = getTitle(formData.get("submissionTitle"), "Dancer submission");
-
-    await ensureVideoBucket();
+    const payload = (await request.json()) as {
+      referenceVideoId?: string;
+      submissionVideoId?: string;
+    };
+    const referenceVideoId = assertNonEmptyString(
+      payload.referenceVideoId,
+      "referenceVideoId",
+      120,
+    );
+    const submissionVideoId = assertNonEmptyString(
+      payload.submissionVideoId,
+      "submissionVideoId",
+      120,
+    );
     const supabase = createServerSupabaseClient();
-
-    const reference = await uploadVideo("reference", referenceFile, referenceTitle);
-    const submission = await uploadVideo("submission", submissionFile, submissionTitle);
 
     const { data: analysis, error: analysisError } = await supabase
       .from("analyses")
       .insert({
-        reference_video_id: reference.id,
-        submission_video_id: submission.id,
+        reference_video_id: referenceVideoId,
+        submission_video_id: submissionVideoId,
         status: "pending",
       })
       .select("id")
@@ -43,7 +41,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown upload error.";
-    const status = error instanceof UploadHttpError ? error.status : 500;
+    const status = error instanceof HttpError ? error.status : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

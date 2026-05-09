@@ -29,37 +29,189 @@ export function CompareForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ analysisId: string; reviewPath: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [uploadEtaSeconds, setUploadEtaSeconds] = useState<number | null>(null);
+  const [progressLabel, setProgressLabel] = useState<string | null>(null);
+
+  async function readJsonSafe<T>(response: Response) {
+    try {
+      return (await response.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 45000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function uploadFileToSignedUrl(signedUrl: string, file: File, progressOffset = 0) {
+    return new Promise<void>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      const startedAt = Date.now();
+      const timer = setTimeout(() => {
+        request.abort();
+        reject(new Error("Upload timed out."));
+      }, 240000);
+
+      request.open("PUT", signedUrl);
+      request.setRequestHeader("x-upsert", "false");
+      request.setRequestHeader("Content-Type", file.type);
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          return;
+        }
+        const currentFilePercent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        setUploadPercent(Math.max(0, Math.min(100, progressOffset + Math.round(currentFilePercent / 2))));
+        const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+        const bytesPerSecond = event.loaded / elapsedSeconds;
+        if (bytesPerSecond > 0) {
+          const remainingBytes = event.total - event.loaded;
+          setUploadEtaSeconds(Math.max(0, Math.round(remainingBytes / bytesPerSecond)));
+        }
+      };
+
+      request.onload = () => {
+        clearTimeout(timer);
+        if (request.status >= 200 && request.status < 300) {
+          resolve();
+          return;
+        }
+        reject(new Error(`Storage upload failed (HTTP ${request.status}).`));
+      };
+      request.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("Storage upload failed."));
+      };
+      request.onabort = () => {
+        clearTimeout(timer);
+        reject(new Error("Upload was aborted."));
+      };
+      request.send(file);
+    });
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+    setUploadPercent(null);
+    setUploadEtaSeconds(null);
+    setProgressLabel("Preparing upload...");
 
     if (!referenceFile || !submissionFile) {
       setError("Upload both a reference video and a dancer submission.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("referenceTitle", referenceTitle);
-    formData.append("submissionTitle", submissionTitle);
-    formData.append("referenceVideo", referenceFile);
-    formData.append("submissionVideo", submissionFile);
-
     startTransition(async () => {
-      const response = await fetch("/api/compare", {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        setProgressLabel("Preparing reference upload...");
+        const refPrepareResponse = await fetchWithTimeout("/api/videos/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "reference",
+            filename: referenceFile.name,
+            mimeType: referenceFile.type,
+          }),
+        });
+        const refPreparePayload = await readJsonSafe<{ path?: string; signedUrl?: string; error?: string }>(
+          refPrepareResponse,
+        );
+        if (!refPrepareResponse.ok || !refPreparePayload?.path || !refPreparePayload.signedUrl) {
+          setError(refPreparePayload?.error ?? "Failed to prepare reference upload.");
+          return;
+        }
 
-      const data = (await response.json()) as CompareResponse;
+        setProgressLabel("Uploading reference video...");
+        await uploadFileToSignedUrl(refPreparePayload.signedUrl, referenceFile, 0);
+        setUploadPercent(50);
 
-      if (!response.ok || "error" in data) {
-        setError("error" in data ? data.error : "Upload failed.");
-        return;
+        setProgressLabel("Finalizing reference...");
+        const refFinalizeResponse = await fetchWithTimeout("/api/videos/finalize-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "reference",
+            title: referenceTitle,
+            path: refPreparePayload.path,
+            mimeType: referenceFile.type,
+          }),
+        });
+        const refFinalizePayload = await readJsonSafe<{ videoId?: string; error?: string }>(refFinalizeResponse);
+        if (!refFinalizeResponse.ok || !refFinalizePayload?.videoId) {
+          setError(refFinalizePayload?.error ?? "Failed to finalize reference upload.");
+          return;
+        }
+
+        setProgressLabel("Preparing dancer upload...");
+        const subPrepareResponse = await fetchWithTimeout("/api/videos/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "submission",
+            filename: submissionFile.name,
+            mimeType: submissionFile.type,
+          }),
+        });
+        const subPreparePayload = await readJsonSafe<{ path?: string; signedUrl?: string; error?: string }>(
+          subPrepareResponse,
+        );
+        if (!subPrepareResponse.ok || !subPreparePayload?.path || !subPreparePayload.signedUrl) {
+          setError(subPreparePayload?.error ?? "Failed to prepare submission upload.");
+          return;
+        }
+
+        setProgressLabel("Uploading dancer video...");
+        await uploadFileToSignedUrl(subPreparePayload.signedUrl, submissionFile, 50);
+        setUploadPercent(100);
+        setUploadEtaSeconds(0);
+
+        setProgressLabel("Finalizing dancer upload...");
+        const subFinalizeResponse = await fetchWithTimeout("/api/videos/finalize-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "submission",
+            title: submissionTitle,
+            path: subPreparePayload.path,
+            mimeType: submissionFile.type,
+          }),
+        });
+        const subFinalizePayload = await readJsonSafe<{ videoId?: string; error?: string }>(subFinalizeResponse);
+        if (!subFinalizeResponse.ok || !subFinalizePayload?.videoId) {
+          setError(subFinalizePayload?.error ?? "Failed to finalize submission upload.");
+          return;
+        }
+
+        setProgressLabel("Creating analysis...");
+        const response = await fetchWithTimeout("/api/compare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            referenceVideoId: refFinalizePayload.videoId,
+            submissionVideoId: subFinalizePayload.videoId,
+          }),
+        });
+        const data = (await response.json()) as CompareResponse;
+
+        if (!response.ok || "error" in data) {
+          setError("error" in data ? data.error : "Failed to create analysis.");
+          return;
+        }
+
+        setProgressLabel("Analysis created.");
+        setSuccess(data);
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : "Upload failed.");
       }
-
-      setSuccess(data);
     });
   }
 
@@ -129,6 +281,26 @@ export function CompareForm() {
         {error ? (
           <div className="mt-6 rounded-2xl border border-rose-400/40 bg-rose-500/15 px-4 py-3 text-sm text-rose-200">
             {error}
+          </div>
+        ) : null}
+
+        {progressLabel ? (
+          <div className="mt-6 rounded-2xl border border-white/20 bg-white/5 px-4 py-3">
+            <p className="text-sm text-slate-200">{progressLabel}</p>
+            {uploadPercent !== null ? (
+              <>
+                <div className="mt-2 h-2 w-full rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-full bg-[#2fa8ff] transition-all"
+                    style={{ width: `${uploadPercent}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-300">
+                  {uploadPercent}% complete
+                  {uploadEtaSeconds !== null && uploadEtaSeconds > 0 ? ` · ~${uploadEtaSeconds}s remaining` : ""}
+                </p>
+              </>
+            ) : null}
           </div>
         ) : null}
 
