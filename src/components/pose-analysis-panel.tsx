@@ -32,6 +32,21 @@ type Preview = {
   submissionImage: string;
 };
 
+function formatTimestampMs(timestampMs: number) {
+  const totalSeconds = Math.max(0, Math.floor(timestampMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function formatOffsetMs(offsetMs: number) {
+  const direction = offsetMs > 0 ? "submission behind" : offsetMs < 0 ? "submission ahead" : "synced";
+  if (offsetMs === 0) {
+    return direction;
+  }
+  return `${formatTimestampMs(Math.abs(offsetMs))} (${direction})`;
+}
+
 function waitForEvent(target: HTMLMediaElement, eventName: "loadeddata" | "seeked") {
   return new Promise<void>((resolve, reject) => {
     const handleSuccess = () => {
@@ -223,8 +238,8 @@ export function PoseAnalysisPanel({
       const comparison = comparePoseFrames(referenceResult.frames, submissionResult.frames);
       const nextSummary =
         comparison.issues.length === 0
-          ? `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset and did not flag any major joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.`
-          : `MirrorMe aligned the clips with a ${comparison.alignmentOffsetMs} ms offset, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.`;
+          ? `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)} and did not flag any critical joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.`
+          : `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)}, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} critical issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.`;
 
       const processResponse = await fetch(`/api/analyses/${analysisId}/process`, {
         method: "POST",
@@ -343,7 +358,7 @@ export function PoseAnalysisPanel({
               className="rounded-2xl border border-white/15 bg-[#161922] p-4"
             >
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                {preview.timestampMs} ms
+                {formatTimestampMs(preview.timestampMs)}
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {/* These preview images are generated client-side from canvas snapshots. */}

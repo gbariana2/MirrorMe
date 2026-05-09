@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { IssueSideBySide } from "@/components/issue-side-by-side";
 import { PoseAnalysisPanel } from "@/components/pose-analysis-panel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isYouTubeUrl } from "@/lib/youtube";
@@ -71,6 +72,34 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
   const issues = [...(analysis.analysis_issues ?? [])].sort(
     (left, right) => left.timestamp_ms - right.timestamp_ms,
   );
+  const overallScore = typeof analysis.overall_score === "number" ? analysis.overall_score : null;
+  const scoreTone =
+    overallScore === null
+      ? "text-slate-300"
+      : overallScore >= 85
+        ? "text-emerald-300"
+        : overallScore >= 70
+          ? "text-amber-300"
+          : overallScore >= 50
+            ? "text-orange-300"
+            : "text-rose-300";
+  const scoreBand =
+    overallScore === null
+      ? "Pending"
+      : overallScore >= 85
+        ? "Excellent"
+        : overallScore >= 70
+          ? "Good"
+          : overallScore >= 50
+            ? "Needs Work"
+            : "Critical";
+
+  function formatTimestampMs(timestampMs: number) {
+    const totalSeconds = Math.max(0, Math.floor(timestampMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
 
   return (
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
@@ -100,7 +129,10 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
                 Overall score
               </p>
               <p className="mt-2 text-3xl font-semibold text-white">
-                {analysis.overall_score ?? "--"}
+                <span className={scoreTone}>{overallScore ?? "--"}</span>
+              </p>
+              <p className={`mt-2 text-xs font-semibold uppercase tracking-[0.14em] ${scoreTone}`}>
+                {scoreBand}
               </p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
@@ -153,7 +185,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
                   </h3>
                   <p className="mt-3 text-sm text-slate-300">
                     Duration:{" "}
-                    {video?.duration_ms ? `${(video.duration_ms / 1000).toFixed(1)}s` : "Unknown"}
+                    {video?.duration_ms ? formatTimestampMs(video.duration_ms) : "Unknown"}
                   </p>
                   {video?.file_url ? (
                     <a
@@ -203,53 +235,17 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
           autoRun={autoRun}
         />
 
-        <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
-              Issues
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
-              Timestamped flags
-            </h2>
-          </div>
-
-          {issues.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/25 bg-[#161922] p-6 text-sm leading-6 text-slate-300">
-              No comparison issues yet. Once frame analysis is wired in, major and minor
-              mismatches will appear here with timestamps and angle deltas.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {issues.map((issue) => (
-                <article
-                  key={issue.id}
-                  className="rounded-2xl border border-white/15 bg-[#161922] p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {issue.joint_name}
-                      </p>
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                        {issue.timestamp_ms} ms
-                      </p>
-                    </div>
-                    <div className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">
-                      {issue.severity}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">
-                    Expected {issue.expected_angle}&deg;, actual {issue.actual_angle}&deg;,
-                    delta {issue.delta}&deg;.
-                  </p>
-                  {issue.notes ? (
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{issue.notes}</p>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        <IssueSideBySide
+          issues={issues.map((issue) => ({
+            id: issue.id,
+            timestampMs: issue.timestamp_ms,
+            jointName: issue.joint_name,
+            severity: "major" as const,
+            notes: issue.notes,
+          }))}
+          referenceVideoUrl={reference?.file_url ?? null}
+          submissionVideoUrl={submission?.file_url ?? null}
+        />
       </div>
     </main>
   );

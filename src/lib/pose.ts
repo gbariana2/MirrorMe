@@ -28,7 +28,7 @@ export type PoseFrame = {
 export type PoseIssue = {
   timestampMs: number;
   jointName: string;
-  severity: "minor" | "major";
+  severity: "major";
   expectedAngle: number;
   actualAngle: number;
   delta: number;
@@ -102,8 +102,7 @@ const JOINT_DEFINITIONS = [
 
 const OFFSET_CANDIDATES_MS = [-2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000];
 const MATCH_TOLERANCE_MS = 600;
-const MINOR_THRESHOLD = 15;
-const MAJOR_THRESHOLD = 30;
+const VERY_MAJOR_THRESHOLD = 45;
 
 function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
@@ -147,6 +146,24 @@ function getJointAngle(landmarks: PosePoint[], pointIndexes: readonly number[]) 
   }
 
   return getAngle(first, middle, last);
+}
+
+function getCameraFacingFactor(landmarks: PosePoint[]) {
+  const leftShoulder = landmarks[POSE_LANDMARK_NAMES.leftShoulder];
+  const rightShoulder = landmarks[POSE_LANDMARK_NAMES.rightShoulder];
+  const leftHip = landmarks[POSE_LANDMARK_NAMES.leftHip];
+  const rightHip = landmarks[POSE_LANDMARK_NAMES.rightHip];
+  if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
+    return 1;
+  }
+
+  const shoulderDepthDelta = Math.abs((leftShoulder.z ?? 0) - (rightShoulder.z ?? 0));
+  const hipDepthDelta = Math.abs((leftHip.z ?? 0) - (rightHip.z ?? 0));
+  const averageDepthDelta = (shoulderDepthDelta + hipDepthDelta) / 2;
+
+  // Higher depth delta means torso is more rotated relative to camera; reduce angular penalty accordingly.
+  const compensation = 1 - Math.min(0.35, averageDepthDelta * 1.2);
+  return Math.max(0.65, compensation);
 }
 
 function getClosestFrame(targetTimestampMs: number, frames: PoseFrame[]) {
@@ -264,25 +281,27 @@ export function comparePoseFrames(
         continue;
       }
 
-      const delta = Math.abs(expectedAngle - actualAngle);
+      const rawDelta = Math.abs(expectedAngle - actualAngle);
+      const cameraFactor = Math.min(
+        getCameraFacingFactor(referenceFrame.landmarks),
+        getCameraFacingFactor(submissionFrame.landmarks),
+      );
+      const delta = rawDelta * cameraFactor;
       weightedJointCount += definition.weight;
       weightedDeltaSum += delta * definition.weight;
 
-      if (delta < MINOR_THRESHOLD) {
+      if (delta < VERY_MAJOR_THRESHOLD) {
         continue;
       }
 
       issues.push({
         timestampMs: referenceFrame.timestampMs,
         jointName: definition.jointName,
-        severity: delta >= MAJOR_THRESHOLD ? "major" : "minor",
+        severity: "major",
         expectedAngle: roundToTwoDecimals(expectedAngle),
         actualAngle: roundToTwoDecimals(actualAngle),
         delta: roundToTwoDecimals(delta),
-        notes:
-          delta >= MAJOR_THRESHOLD
-            ? "Joint angle diverges substantially from the aligned reference frame."
-            : "Joint angle is drifting outside the target range after alignment.",
+        notes: "Critical mismatch detected after camera-angle compensation.",
       });
     }
   }
@@ -291,7 +310,7 @@ export function comparePoseFrames(
     weightedJointCount === 0 ? 0 : roundToTwoDecimals(weightedDeltaSum / weightedJointCount);
 
   const issuePenalty = issues.reduce((sum, issue) => {
-    return sum + (issue.severity === "major" ? 6 : 2.5);
+    return sum + (issue.severity === "major" ? 8.5 : 0);
   }, 0);
   const deltaPenalty = averageDelta * 1.35;
   const coveragePenalty =
