@@ -2,14 +2,8 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-type Props = {
-  params: {
-    id: string;
-  };
-};
 
 type AssigneeStatus = {
   dancerUserId: string;
@@ -38,8 +32,9 @@ type AssignmentStatusResponse = {
   teamDancerUserIds: string[];
 };
 
-export default function CaptainAssignmentStatusPage({ params }: Props) {
+export default function CaptainAssignmentStatusPage() {
   const { userId } = useAuth();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const [statusData, setStatusData] = useState<AssignmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +43,7 @@ export default function CaptainAssignmentStatusPage({ params }: Props) {
   const [isArchiving, setIsArchiving] = useState(false);
   const [editDueAt, setEditDueAt] = useState("");
   const [editAssignees, setEditAssignees] = useState<string[]>([]);
-  const assignmentId = params.id;
+  const assignmentId = typeof params?.id === "string" ? params.id : "";
   const submittedAssignees = statusData?.assignees.filter(
     (assignee) => assignee.status === "submitted" && assignee.reviewPath,
   ) ?? [];

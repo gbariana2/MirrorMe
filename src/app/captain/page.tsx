@@ -742,27 +742,21 @@ export default function CaptainPage() {
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="grid gap-1 text-xs text-slate-300">
                 <span>Due date</span>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(event) => setDueDate(event.target.value)}
-                    className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 pr-11 text-sm outline-none"
-                  />
-                  <span className="captain-input-icon" aria-hidden="true">📅</span>
-                </div>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                />
               </label>
               <label className="grid gap-1 text-xs text-slate-300">
                 <span>Due time</span>
-                <div className="relative">
-                  <input
-                    type="time"
-                    value={dueTime}
-                    onChange={(event) => setDueTime(event.target.value)}
-                    className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 pr-11 text-sm outline-none"
-                  />
-                  <span className="captain-input-icon" aria-hidden="true">🕒</span>
-                </div>
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(event) => setDueTime(event.target.value)}
+                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                />
               </label>
             </div>
             <textarea
