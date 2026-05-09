@@ -7,10 +7,16 @@ import { useEffect, useState } from "react";
 
 type AssigneeStatus = {
   dancerUserId: string;
-  status: "not_submitted" | "submitted" | "processing" | "analyzed" | "failed";
+  status: "not_submitted" | "past_due" | "submitted" | "processing" | "analyzed" | "failed";
   submittedAt: string | null;
   analysisId: string | null;
   reviewPath: string | null;
+};
+
+type TeamMemberOption = {
+  userId: string;
+  role: "captain" | "dancer";
+  displayName: string | null;
 };
 
 type AssignmentStatusResponse = {
@@ -24,12 +30,13 @@ type AssignmentStatusResponse = {
   assignees: AssigneeStatus[];
   summary: {
     not_submitted: number;
+    past_due: number;
     submitted: number;
     processing: number;
     analyzed: number;
     failed: number;
   };
-  teamDancerUserIds: string[];
+  teamMemberOptions: TeamMemberOption[];
 };
 
 export default function CaptainAssignmentStatusPage() {
@@ -201,22 +208,44 @@ export default function CaptainAssignmentStatusPage() {
             <p className="mt-1 text-xs text-slate-300">
               Due: {new Date(statusData.assignment.due_at).toLocaleString()}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
-                Not submitted: {statusData.summary.not_submitted}
-              </span>
-              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
-                Submitted: {statusData.summary.submitted}
-              </span>
-              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
-                Processing: {statusData.summary.processing}
-              </span>
-              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
-                Analyzed: {statusData.summary.analyzed}
-              </span>
-              <span className="rounded-full border border-white/20 px-2 py-1 text-slate-300">
-                Failed: {statusData.summary.failed}
-              </span>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                {
+                  label: "Not submitted",
+                  value: statusData.summary.not_submitted,
+                  tone: "border-slate-400/40 bg-slate-500/10 text-slate-200",
+                },
+                {
+                  label: "Past due",
+                  value: statusData.summary.past_due,
+                  tone: "border-rose-400/45 bg-rose-500/15 text-rose-200",
+                },
+                {
+                  label: "Submitted",
+                  value: statusData.summary.submitted,
+                  tone: "border-amber-400/45 bg-amber-500/15 text-amber-200",
+                },
+                {
+                  label: "Processing",
+                  value: statusData.summary.processing,
+                  tone: "border-orange-400/45 bg-orange-500/15 text-orange-200",
+                },
+                {
+                  label: "Analyzed",
+                  value: statusData.summary.analyzed,
+                  tone: "border-emerald-400/45 bg-emerald-500/15 text-emerald-200",
+                },
+                {
+                  label: "Failed",
+                  value: statusData.summary.failed,
+                  tone: "border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-200",
+                },
+              ].map((item) => (
+                <div key={item.label} className={`rounded-lg border px-3 py-2 ${item.tone}`}>
+                  <p className="text-[11px] uppercase tracking-[0.08em]">{item.label}</p>
+                  <p className="mt-1 text-lg font-bold">{item.value}</p>
+                </div>
+              ))}
             </div>
 
             <div className="mt-4 rounded-lg border border-white/15 bg-[#171c2f] p-3">
@@ -229,20 +258,23 @@ export default function CaptainAssignmentStatusPage() {
                   className="rounded-xl border border-white/20 bg-[#121527] px-3 py-2 text-xs outline-none"
                 />
                 <div className="grid gap-2">
-                  {statusData.teamDancerUserIds.map((dancerUserId) => (
-                    <label key={dancerUserId} className="flex items-center gap-2 text-xs text-slate-200">
+                  {statusData.teamMemberOptions.map((member) => (
+                    <label key={member.userId} className="flex items-center gap-2 text-xs text-slate-200">
                       <input
                         type="checkbox"
-                        checked={editAssignees.includes(dancerUserId)}
+                        checked={editAssignees.includes(member.userId)}
                         onChange={(event) => {
                           setEditAssignees((current) =>
                             event.target.checked
-                              ? [...current, dancerUserId]
-                              : current.filter((value) => value !== dancerUserId),
+                              ? [...current, member.userId]
+                              : current.filter((value) => value !== member.userId),
                           );
                         }}
                       />
-                      <span>{dancerUserId}</span>
+                      <span>
+                        {member.displayName?.trim() ? member.displayName : member.userId}{" "}
+                        <span className="text-slate-400">({member.role})</span>
+                      </span>
                     </label>
                   ))}
                 </div>

@@ -54,20 +54,20 @@ export async function GET(request: Request, context: RouteContext) {
       throw targetsError;
     }
 
-    const { data: teamDancers, error: teamDancersError } = await supabase
+    const { data: teamMembers, error: teamMembersError } = await supabase
       .from("team_memberships")
-      .select("user_id")
+      .select("user_id, role, display_name")
       .eq("team_id", assignment.team_id)
-      .eq("role", "dancer")
       .order("created_at", { ascending: true });
 
-    if (teamDancersError) {
-      throw teamDancersError;
+    if (teamMembersError) {
+      throw teamMembersError;
     }
 
     const dancerUserIds = (targets ?? []).map((item) => item.dancer_user_id);
     const baseSummary = {
       not_submitted: 0,
+      past_due: 0,
       submitted: 0,
       processing: 0,
       analyzed: 0,
@@ -79,7 +79,11 @@ export async function GET(request: Request, context: RouteContext) {
         assignment,
         assignees: [],
         summary: baseSummary,
-        teamDancerUserIds: (teamDancers ?? []).map((row) => row.user_id),
+        teamMemberOptions: (teamMembers ?? []).map((row) => ({
+          userId: row.user_id,
+          role: row.role,
+          displayName: row.display_name,
+        })),
       });
     }
 
@@ -114,7 +118,7 @@ export async function GET(request: Request, context: RouteContext) {
       const submission = submissionByDancer.get(dancerUserId);
       const analysis = submission ? analysisById.get(submission.analysis_id) : null;
 
-      let status: "not_submitted" | "submitted" | "processing" | "analyzed" | "failed" =
+      let status: "not_submitted" | "past_due" | "submitted" | "processing" | "analyzed" | "failed" =
         "not_submitted";
       if (submission && analysis?.status === "completed") {
         status = "analyzed";
@@ -124,6 +128,8 @@ export async function GET(request: Request, context: RouteContext) {
         status = "failed";
       } else if (submission) {
         status = "submitted";
+      } else if (Date.now() > new Date(assignment.due_at).getTime()) {
+        status = "past_due";
       }
 
       return {
@@ -147,7 +153,11 @@ export async function GET(request: Request, context: RouteContext) {
       assignment,
       assignees,
       summary,
-      teamDancerUserIds: (teamDancers ?? []).map((row) => row.user_id),
+      teamMemberOptions: (teamMembers ?? []).map((row) => ({
+        userId: row.user_id,
+        role: row.role,
+        displayName: row.display_name,
+      })),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load assignment status.";
