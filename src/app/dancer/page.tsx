@@ -38,6 +38,9 @@ function DancerDashboard() {
   const [reviewLinks, setReviewLinks] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const [submitProgress, setSubmitProgress] = useState<Record<string, string>>({});
+  const [uploadPercent, setUploadPercent] = useState<Record<string, number | null>>({});
+  const [uploadEtaSeconds, setUploadEtaSeconds] = useState<Record<string, number | null>>({});
+  const [assignmentMode, setAssignmentMode] = useState<"dancer" | "captain">("dancer");
   const [error, setError] = useState<string | null>(null);
 
   async function readJsonSafe<T>(response: Response) {
@@ -58,9 +61,15 @@ function DancerDashboard() {
     }
   }
 
-  function uploadFileToSignedUrl(signedUrl: string, file: File, timeoutMs = 180000) {
+  function uploadFileToSignedUrl(
+    assignmentId: string,
+    signedUrl: string,
+    file: File,
+    timeoutMs = 180000,
+  ) {
     return new Promise<void>((resolve, reject) => {
       const request = new XMLHttpRequest();
+      const startedAt = Date.now();
       const timer = setTimeout(() => {
         request.abort();
         reject(new Error("Upload timed out."));
@@ -69,6 +78,22 @@ function DancerDashboard() {
       request.open("PUT", signedUrl);
       request.setRequestHeader("x-upsert", "false");
       request.setRequestHeader("Content-Type", file.type);
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          return;
+        }
+        const percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        setUploadPercent((current) => ({ ...current, [assignmentId]: percent }));
+        const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+        const bytesPerSecond = event.loaded / elapsedSeconds;
+        if (bytesPerSecond > 0) {
+          const remainingBytes = event.total - event.loaded;
+          setUploadEtaSeconds((current) => ({
+            ...current,
+            [assignmentId]: Math.max(0, Math.round(remainingBytes / bytesPerSecond)),
+          }));
+        }
+      };
 
       request.onload = () => {
         clearTimeout(timer);
@@ -107,7 +132,8 @@ function DancerDashboard() {
 
   async function loadAssignments(teamId: string) {
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
-    const response = await fetch(`/api/teams/${teamId}/assignments${query}`);
+    const joiner = query ? "&" : "?";
+    const response = await fetch(`/api/teams/${teamId}/assignments${query}${joiner}asRole=${assignmentMode}`);
     const payload = (await response.json()) as { assignments?: Assignment[]; error?: string };
     if (!response.ok) {
       throw new Error(payload.error ?? "Failed to load assignments.");
@@ -142,7 +168,7 @@ function DancerDashboard() {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load assignments.");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTeamId]);
+  }, [selectedTeamId, assignmentMode]);
 
   async function joinTeam(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -173,6 +199,8 @@ function DancerDashboard() {
 
     setIsSubmitting((current) => ({ ...current, [assignmentId]: true }));
     setSubmitProgress((current) => ({ ...current, [assignmentId]: "Preparing upload..." }));
+    setUploadPercent((current) => ({ ...current, [assignmentId]: null }));
+    setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: null }));
     try {
       setError(null);
 
@@ -204,7 +232,9 @@ function DancerDashboard() {
       }
 
       setSubmitProgress((current) => ({ ...current, [assignmentId]: "Uploading submission..." }));
-      await uploadFileToSignedUrl(preparePayload.signedUrl, submissionFile);
+      await uploadFileToSignedUrl(assignmentId, preparePayload.signedUrl, submissionFile);
+      setUploadPercent((current) => ({ ...current, [assignmentId]: 100 }));
+      setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: 0 }));
 
       setSubmitProgress((current) => ({ ...current, [assignmentId]: "Finalizing upload..." }));
       const finalizeResponse = await fetchWithTimeout(
@@ -268,6 +298,32 @@ function DancerDashboard() {
           <p className="mt-2 text-sm text-slate-300">
             Join teams, open weekly assignments, and submit before deadline.
           </p>
+          {teams.some((team) => team.role === "captain") ? (
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAssignmentMode("dancer")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  assignmentMode === "dancer"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-300"
+                }`}
+              >
+                My assigned work
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignmentMode("captain")}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  assignmentMode === "captain"
+                    ? "bg-[#2fa8ff] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-300"
+                }`}
+              >
+                Captain team view
+              </button>
+            </div>
+          ) : null}
 
           <form className="mt-6 grid gap-3" onSubmit={joinTeam}>
             <input
@@ -337,6 +393,22 @@ function DancerDashboard() {
                 </div>
                 {submitProgress[assignment.id] ? (
                   <p className="mt-2 text-xs text-slate-300">{submitProgress[assignment.id]}</p>
+                ) : null}
+                {uploadPercent[assignment.id] !== null && uploadPercent[assignment.id] !== undefined ? (
+                  <div className="mt-2 space-y-1">
+                    <div className="h-2 overflow-hidden rounded-full bg-[#1d233a]">
+                      <div
+                        className="h-full bg-[#2fa8ff] transition-all"
+                        style={{ width: `${uploadPercent[assignment.id] ?? 0}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Upload {uploadPercent[assignment.id]}%
+                      {uploadEtaSeconds[assignment.id] !== null && uploadEtaSeconds[assignment.id] !== undefined
+                        ? ` • ~${uploadEtaSeconds[assignment.id]}s remaining`
+                        : ""}
+                    </p>
+                  </div>
                 ) : null}
                 {reviewLinks[assignment.id] ? (
                   <Link

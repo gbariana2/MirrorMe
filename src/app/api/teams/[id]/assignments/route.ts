@@ -25,6 +25,8 @@ export async function GET(request: Request, context: RouteContext) {
     const { searchParams } = new URL(request.url);
     const userId = await getRequiredUserId(searchParams.get("userId"));
     const includeArchived = searchParams.get("includeArchived") === "1";
+    const asRoleParam = searchParams.get("asRole");
+    const requestedRole = asRoleParam === "captain" || asRoleParam === "dancer" ? asRoleParam : null;
     const supabase = createServerSupabaseClient();
 
     const { data: member, error: memberError } = await supabase
@@ -42,8 +44,9 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     let targetedAssignmentIds: string[] | null = null;
+    const effectiveRole = requestedRole ?? member.role;
 
-    if (member.role === "dancer") {
+    if (effectiveRole === "dancer") {
       const { data: targets, error: targetError } = await supabase
         .from("assignment_targets")
         .select("assignment_id")
@@ -65,7 +68,7 @@ export async function GET(request: Request, context: RouteContext) {
       .eq("team_id", id)
       .order("due_at", { ascending: true });
 
-    if (member.role === "dancer" || !includeArchived) {
+    if (effectiveRole === "dancer" || !includeArchived) {
       query = query.is("archived_at", null);
     }
 
