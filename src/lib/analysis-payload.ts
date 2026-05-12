@@ -8,7 +8,7 @@ export type ProcessPayload = {
   summary: string;
 };
 
-const MAX_FRAMES = 10800;
+const MAX_FRAMES = 14400;
 const MAX_ISSUES = 1000;
 const MAX_TIMESTAMP_MS = 2 * 60 * 60 * 1000;
 const MAX_LANDMARKS = 33;

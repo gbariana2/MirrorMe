@@ -12,7 +12,7 @@ import {
 import { comparePoseFrames, type PoseFrame } from "@/lib/pose";
 import { isYouTubeUrl } from "@/lib/youtube";
 
-const SAMPLE_INTERVAL_MS = 1000;
+const SAMPLE_INTERVAL_MS = 500;
 const WASM_ROOT = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const MODEL_ASSET_PATH =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
@@ -309,7 +309,7 @@ export function PoseAnalysisPanel({
             Run the first MediaPipe comparison pass
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            This samples the full duration of both videos at one-second intervals, computes
+            This samples the full duration of both videos at 0.5-second intervals, computes
             weighted joint-angle differences, stores frames and issues, and updates the analysis record.
           </p>
         </div>
@@ -337,7 +337,7 @@ export function PoseAnalysisPanel({
         </div>
         <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sampling window</p>
-          <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 1s</p>
+          <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 0.5s</p>
         </div>
       </div>
 

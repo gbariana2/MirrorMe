@@ -101,8 +101,10 @@ const JOINT_DEFINITIONS = [
   },
 ];
 
-const OFFSET_CANDIDATES_MS = Array.from({ length: 65 }, (_, index) => -8000 + index * 250);
-const MATCH_TOLERANCE_MS = 600;
+const COARSE_OFFSET_CANDIDATES_MS = Array.from({ length: 81 }, (_, index) => -10000 + index * 250);
+const FINE_OFFSET_STEP_MS = 50;
+const FINE_OFFSET_WINDOW_MS = 400;
+const MATCH_TOLERANCE_MS = 350;
 const VERY_MAJOR_THRESHOLD = 60;
 const ACTIVITY_START_THRESHOLD = 0.06;
 const ACTIVE_FRAME_MOTION_THRESHOLD = 0.015;
@@ -366,7 +368,7 @@ function getBestAlignmentOffset(referenceFrames: PoseFrame[], submissionFrames: 
     averageDelta: Number.POSITIVE_INFINITY,
   };
 
-  for (const offsetMs of OFFSET_CANDIDATES_MS) {
+  for (const offsetMs of COARSE_OFFSET_CANDIDATES_MS) {
     const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
 
     if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
@@ -377,6 +379,22 @@ function getBestAlignmentOffset(referenceFrames: PoseFrame[], submissionFrames: 
     if (
       candidate.alignedFrameCount === bestCandidate.alignedFrameCount &&
       candidate.averageDelta < bestCandidate.averageDelta
+    ) {
+      bestCandidate = candidate;
+    }
+  }
+
+  const fineStart = bestCandidate.offsetMs - FINE_OFFSET_WINDOW_MS;
+  const fineEnd = bestCandidate.offsetMs + FINE_OFFSET_WINDOW_MS;
+  for (let offsetMs = fineStart; offsetMs <= fineEnd; offsetMs += FINE_OFFSET_STEP_MS) {
+    const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
+    if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
+      bestCandidate = candidate;
+      continue;
+    }
+    if (
+      candidate.alignedFrameCount === bestCandidate.alignedFrameCount
+      && candidate.averageDelta < bestCandidate.averageDelta
     ) {
       bestCandidate = candidate;
     }
