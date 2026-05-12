@@ -134,21 +134,13 @@ function getRedPointIndexes(badKeys: Set<string>) {
   return indexes;
 }
 
-function drawPose(
-  canvas: HTMLCanvasElement,
+function drawSkeleton(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
   landmarks: Landmark[],
   redPointIndexes: Set<number>,
 ) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return;
-  }
-
-  const width = canvas.width;
-  const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
-
-  // Draw connectors first.
   for (const [from, to] of CONNECTIONS) {
     const a = landmarks[from];
     const b = landmarks[to];
@@ -164,7 +156,6 @@ function drawPose(
     ctx.stroke();
   }
 
-  // Draw pivot points.
   landmarks.forEach((point, index) => {
     if (!isVisible(point)) {
       return;
@@ -176,75 +167,72 @@ function drawPose(
   });
 }
 
+async function drawVideoFrameWithSkeleton(
+  canvas: HTMLCanvasElement,
+  videoUrl: string,
+  timestampMs: number,
+  landmarks: Landmark[],
+  redPointIndexes: Set<number>,
+) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+
+  const video = document.createElement("video");
+  video.crossOrigin = "anonymous";
+  video.muted = true;
+  video.preload = "auto";
+  video.src = videoUrl;
+
+  await new Promise<void>((resolve, reject) => {
+    const onLoaded = () => resolve();
+    const onError = () => reject(new Error("Failed to load video for frame preview."));
+    video.addEventListener("loadedmetadata", onLoaded, { once: true });
+    video.addEventListener("error", onError, { once: true });
+  });
+
+  const seekTime = Math.min(Math.max(0, timestampMs / 1000), Math.max(0, video.duration - 0.05));
+
+  await new Promise<void>((resolve, reject) => {
+    const onSeeked = () => resolve();
+    const onError = () => reject(new Error("Failed to seek video for frame preview."));
+    video.addEventListener("seeked", onSeeked, { once: true });
+    video.addEventListener("error", onError, { once: true });
+    video.currentTime = seekTime;
+  });
+
+  const width = Math.max(320, video.videoWidth || 640);
+  const height = Math.max(180, video.videoHeight || 360);
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(video, 0, 0, width, height);
+  drawSkeleton(ctx, width, height, landmarks, redPointIndexes);
+}
+
 export function IssueSideBySide({
   analysisId,
   issues,
   referenceVideoUrl,
   submissionVideoUrl,
 }: Props) {
-  const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
+  const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
   const [frameData, setFrameData] = useState<FramePayload | null>(null);
   const [frameError, setFrameError] = useState<string | null>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const referenceRef = useRef<HTMLVideoElement | null>(null);
-  const submissionRef = useRef<HTMLVideoElement | null>(null);
+  const [syncPlaying, setSyncPlaying] = useState(false);
+
   const referenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const submissionCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const referenceVideoRef = useRef<HTMLVideoElement | null>(null);
+  const submissionVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => {
-    if (!activeIssue) {
-      return;
-    }
-
-    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    const targetTimeSeconds = activeIssue.timestampMs / 1000;
-    const setVideoTime = (video: HTMLVideoElement | null) => {
-      if (!video) {
-        return;
-      }
-      const seek = () => {
-        try {
-          video.currentTime = targetTimeSeconds;
-        } catch {
-          // noop
-        }
-      };
-      if (video.readyState >= 1) {
-        seek();
-      } else {
-        video.addEventListener("loadedmetadata", seek, { once: true });
-      }
-    };
-
-    setVideoTime(referenceRef.current);
-    setVideoTime(submissionRef.current);
-
-    const controller = new AbortController();
-    fetch(`/api/analyses/${analysisId}/frame?timestampMs=${activeIssue.timestampMs}`, {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as FramePayload | { error: string };
-        if (!response.ok || "error" in payload) {
-          throw new Error("error" in payload ? payload.error : "Failed to load frame data.");
-        }
-        setFrameData(payload);
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        setFrameError(error instanceof Error ? error.message : "Failed to load frame data.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setIsFrameLoading(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [activeIssue, analysisId]);
+  const expandedIssue = useMemo(
+    () => issues.find((issue) => issue.id === expandedIssueId) ?? null,
+    [expandedIssueId, issues],
+  );
 
   const badJointKeys = useMemo(() => {
     if (!frameData) {
@@ -255,17 +243,120 @@ export function IssueSideBySide({
 
   const redPointIndexes = useMemo(() => getRedPointIndexes(badJointKeys), [badJointKeys]);
 
-  useEffect(() => {
-    if (!frameData) {
+  async function expandIssue(issue: Issue) {
+    if (expandedIssueId === issue.id) {
+      setExpandedIssueId(null);
+      setFrameData(null);
+      setFrameError(null);
+      setIsFrameLoading(false);
+      setSyncPlaying(false);
       return;
     }
-    if (referenceCanvasRef.current) {
-      drawPose(referenceCanvasRef.current, frameData.referenceLandmarks, redPointIndexes);
+
+    setExpandedIssueId(issue.id);
+    setFrameData(null);
+    setFrameError(null);
+    setIsFrameLoading(true);
+
+    try {
+      const response = await fetch(`/api/analyses/${analysisId}/frame?timestampMs=${issue.timestampMs}`);
+      const payload = (await response.json()) as FramePayload | { error: string };
+      if (!response.ok || "error" in payload) {
+        throw new Error("error" in payload ? payload.error : "Failed to load frame data.");
+      }
+      setFrameData(payload);
+    } catch (error) {
+      setFrameError(error instanceof Error ? error.message : "Failed to load frame data.");
+    } finally {
+      setIsFrameLoading(false);
     }
-    if (submissionCanvasRef.current) {
-      drawPose(submissionCanvasRef.current, frameData.submissionLandmarks, redPointIndexes);
+  }
+
+  useEffect(() => {
+    if (!expandedIssue || !frameData || !referenceVideoUrl || !submissionVideoUrl) {
+      return;
     }
-  }, [frameData, redPointIndexes]);
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        if (referenceCanvasRef.current) {
+          await drawVideoFrameWithSkeleton(
+            referenceCanvasRef.current,
+            referenceVideoUrl,
+            frameData.timestampMs,
+            frameData.referenceLandmarks,
+            redPointIndexes,
+          );
+        }
+        if (submissionCanvasRef.current) {
+          await drawVideoFrameWithSkeleton(
+            submissionCanvasRef.current,
+            submissionVideoUrl,
+            frameData.timestampMs,
+            frameData.submissionLandmarks,
+            redPointIndexes,
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setFrameError(error instanceof Error ? error.message : "Failed to render side-by-side preview.");
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expandedIssue, frameData, redPointIndexes, referenceVideoUrl, submissionVideoUrl]);
+
+  useEffect(() => {
+    if (!expandedIssue || !referenceVideoRef.current || !submissionVideoRef.current) {
+      return;
+    }
+    const target = expandedIssue.timestampMs / 1000;
+    const applyTime = (video: HTMLVideoElement) => {
+      const seek = () => {
+        try {
+          video.currentTime = target;
+        } catch {
+          // noop
+        }
+      };
+      if (video.readyState >= 1) {
+        seek();
+      } else {
+        video.addEventListener("loadedmetadata", seek, { once: true });
+      }
+    };
+    applyTime(referenceVideoRef.current);
+    applyTime(submissionVideoRef.current);
+  }, [expandedIssue]);
+
+  async function toggleSyncPlayback() {
+    const left = referenceVideoRef.current;
+    const right = submissionVideoRef.current;
+    if (!left || !right || !expandedIssue) {
+      return;
+    }
+
+    if (syncPlaying) {
+      left.pause();
+      right.pause();
+      setSyncPlaying(false);
+      return;
+    }
+
+    const target = expandedIssue.timestampMs / 1000;
+    left.currentTime = target;
+    right.currentTime = target;
+
+    await Promise.allSettled([left.play(), right.play()]);
+    setSyncPlaying(true);
+  }
 
   return (
     <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
@@ -278,71 +369,79 @@ export function IssueSideBySide({
         </div>
       ) : (
         <div className="mt-5 space-y-3">
-          {issues.map((issue) => (
-            <article key={issue.id} className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-white">{formatJointName(issue.jointName)}</p>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                    {formatTimestampMs(issue.timestampMs)}
-                  </p>
+          {issues.map((issue) => {
+            const isExpanded = expandedIssueId === issue.id;
+            return (
+              <article key={issue.id} className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{formatJointName(issue.jointName)}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                      {formatTimestampMs(issue.timestampMs)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void expandIssue(issue);
+                    }}
+                    className="rounded-full border border-[#8fd4ff]/55 px-3 py-1 text-xs font-semibold text-[#8fd4ff]"
+                  >
+                    {isExpanded ? "Hide comparison" : "View side-by-side"}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFrameData(null);
-                    setFrameError(null);
-                    setIsFrameLoading(true);
-                    setActiveIssue(issue);
-                  }}
-                  className="rounded-full border border-[#8fd4ff]/55 px-3 py-1 text-xs font-semibold text-[#8fd4ff]"
-                >
-                  View side-by-side
-                </button>
-              </div>
-              {issue.notes ? <p className="mt-2 text-sm text-slate-300">{issue.notes}</p> : null}
-            </article>
-          ))}
+                {issue.notes ? <p className="mt-2 text-sm text-slate-300">{issue.notes}</p> : null}
+
+                {isExpanded ? (
+                  <div className="mt-4 rounded-xl border border-white/15 bg-[#101625] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+                      Side-by-side at {formatTimestampMs(issue.timestampMs)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Green = relatively aligned. Red = high deviation pivots/connectors.
+                    </p>
+                    {isFrameLoading ? <p className="mt-2 text-xs text-slate-300">Loading image comparison...</p> : null}
+                    {frameError ? <p className="mt-2 text-xs text-rose-300">{frameError}</p> : null}
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <canvas ref={referenceCanvasRef} className="w-full rounded-lg bg-[#0a1020]" />
+                      <canvas ref={submissionCanvasRef} className="w-full rounded-lg bg-[#0a1020]" />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void toggleSyncPlayback();
+                        }}
+                        className="rounded-full border border-white/25 px-3 py-1 text-xs font-semibold text-slate-200"
+                      >
+                        {syncPlaying ? "Pause both" : "Play both (synced)"}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <video
+                        ref={referenceVideoRef}
+                        src={referenceVideoUrl ?? undefined}
+                        controls
+                        muted
+                        className="w-full rounded-xl"
+                      />
+                      <video
+                        ref={submissionVideoRef}
+                        src={submissionVideoUrl ?? undefined}
+                        controls
+                        muted
+                        className="w-full rounded-xl"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       )}
-
-      {activeIssue ? (
-        <div ref={panelRef} className="mt-6 rounded-2xl border border-white/15 bg-[#121527] p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">
-              Side-by-side at {formatTimestampMs(activeIssue.timestampMs)}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveIssue(null);
-                setFrameData(null);
-                setFrameError(null);
-                setIsFrameLoading(false);
-              }}
-              className="text-xs font-semibold text-[#8fd4ff] underline"
-            >
-              Close
-            </button>
-          </div>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <video ref={referenceRef} src={referenceVideoUrl ?? undefined} controls className="w-full rounded-xl" />
-            <video ref={submissionRef} src={submissionVideoUrl ?? undefined} controls className="w-full rounded-xl" />
-          </div>
-
-          <div className="mt-4 rounded-xl border border-white/15 bg-[#101625] p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Pose Map</p>
-            <p className="mt-1 text-xs text-slate-400">Green = relatively aligned. Red = high deviation pivots/connectors.</p>
-            {isFrameLoading ? <p className="mt-2 text-xs text-slate-300">Loading pose frame...</p> : null}
-            {frameError ? <p className="mt-2 text-xs text-rose-300">{frameError}</p> : null}
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <canvas ref={referenceCanvasRef} width={360} height={240} className="w-full rounded-lg bg-[#0a1020]" />
-              <canvas ref={submissionCanvasRef} width={360} height={240} className="w-full rounded-lg bg-[#0a1020]" />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }
