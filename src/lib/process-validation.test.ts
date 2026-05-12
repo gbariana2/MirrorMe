@@ -21,7 +21,7 @@ function makePayload() {
       {
         timestampMs: 0,
         jointName: "left_elbow",
-        severity: "minor",
+        severity: "major",
         expectedAngle: 12.3456,
         actualAngle: 25.6789,
         delta: 13.3333,
@@ -63,7 +63,7 @@ test("parseProcessPayload rejects malformed payloads", () => {
           {
             timestampMs: 0,
             jointName: "bad-name",
-            severity: "minor",
+            severity: "major",
             expectedAngle: 1,
             actualAngle: 1,
             delta: 0,

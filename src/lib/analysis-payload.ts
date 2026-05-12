@@ -8,9 +8,9 @@ export type ProcessPayload = {
   summary: string;
 };
 
-const MAX_FRAMES = 300;
+const MAX_FRAMES = 10800;
 const MAX_ISSUES = 1000;
-const MAX_TIMESTAMP_MS = 10 * 60 * 1000;
+const MAX_TIMESTAMP_MS = 2 * 60 * 60 * 1000;
 const MAX_LANDMARKS = 33;
 const MAX_SUMMARY_LENGTH = 1200;
 const JOINT_NAME_PATTERN = /^[a-z_]+$/;
@@ -124,7 +124,7 @@ function assertValidIssues(issues: unknown): PoseIssue[] {
       throw new Error(`issues[${index}].jointName is invalid.`);
     }
 
-    if (severity !== "minor" && severity !== "major") {
+    if (severity !== "major") {
       throw new Error(`issues[${index}].severity is invalid.`);
     }
 

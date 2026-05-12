@@ -13,7 +13,6 @@ import { comparePoseFrames, type PoseFrame } from "@/lib/pose";
 import { isYouTubeUrl } from "@/lib/youtube";
 
 const SAMPLE_INTERVAL_MS = 1000;
-const MAX_ANALYSIS_DURATION_MS = 10000;
 const WASM_ROOT = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const MODEL_ASSET_PATH =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
@@ -133,7 +132,7 @@ async function samplePoseFrames(
 ) {
   const frames: PoseFrame[] = [];
   const previews: Array<{ timestampMs: number; image: string }> = [];
-  const maxDuration = Math.min(video.duration * 1000, MAX_ANALYSIS_DURATION_MS);
+  const maxDuration = Math.max(0, Math.floor(video.duration * 1000));
 
   for (let timestampMs = 0; timestampMs <= maxDuration; timestampMs += SAMPLE_INTERVAL_MS) {
     video.currentTime = timestampMs / 1000;
@@ -232,7 +231,7 @@ export function PoseAnalysisPanel({
         submissionResource.video,
         poseLandmarker,
         previewCanvas,
-        MAX_ANALYSIS_DURATION_MS + SAMPLE_INTERVAL_MS,
+        Math.max(0, Math.floor(referenceResource.video.duration * 1000)) + SAMPLE_INTERVAL_MS,
       );
 
       const comparison = comparePoseFrames(referenceResult.frames, submissionResult.frames);
@@ -306,8 +305,8 @@ export function PoseAnalysisPanel({
             Run the first MediaPipe comparison pass
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            This samples the first 10 seconds of both videos, computes a small set of joint
-            angles, stores the resulting frames and issues, and updates the analysis record.
+            This samples the full duration of both videos at one-second intervals, computes
+            weighted joint-angle differences, stores frames and issues, and updates the analysis record.
           </p>
         </div>
 
@@ -334,7 +333,7 @@ export function PoseAnalysisPanel({
         </div>
         <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sampling window</p>
-          <p className="mt-2 text-sm font-medium text-slate-200">0s to 10s, every 1s</p>
+          <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 1s</p>
         </div>
       </div>
 
