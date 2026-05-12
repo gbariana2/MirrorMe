@@ -112,6 +112,37 @@ function roundToTwoDecimals(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function roundToNearestFive(value: number) {
+  return Math.round(value / 5) * 5;
+}
+
+function humanJointName(jointName: string) {
+  switch (jointName) {
+    case "left_elbow":
+      return "left arm";
+    case "right_elbow":
+      return "right arm";
+    case "left_shoulder":
+      return "left shoulder";
+    case "right_shoulder":
+      return "right shoulder";
+    case "left_knee":
+      return "left leg";
+    case "right_knee":
+      return "right leg";
+    default:
+      return jointName.replaceAll("_", " ");
+  }
+}
+
+function buildCoachingNote(jointName: string, expectedAngle: number, actualAngle: number) {
+  const expectedRounded = roundToNearestFive(expectedAngle);
+  const actualRounded = roundToNearestFive(actualAngle);
+  const direction =
+    actualRounded > expectedRounded ? "more open" : "more bent";
+  return `Your ${humanJointName(jointName)} is around ${actualRounded}\u00b0, while the reference is closer to ${expectedRounded}\u00b0. Try making it ${direction} to match the target shape.`;
+}
+
 function getAngle(first: PosePoint, middle: PosePoint, last: PosePoint) {
   const ab = { x: first.x - middle.x, y: first.y - middle.y };
   const cb = { x: last.x - middle.x, y: last.y - middle.y };
@@ -301,7 +332,7 @@ export function comparePoseFrames(
         expectedAngle: roundToTwoDecimals(expectedAngle),
         actualAngle: roundToTwoDecimals(actualAngle),
         delta: roundToTwoDecimals(delta),
-        notes: "Critical mismatch detected after camera-angle compensation.",
+        notes: buildCoachingNote(definition.jointName, expectedAngle, actualAngle),
       });
     }
   }

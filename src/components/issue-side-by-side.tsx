@@ -23,6 +23,13 @@ function formatTimestampMs(timestampMs: number) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+function formatJointName(jointName: string) {
+  return jointName
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function IssueSideBySide({ issues, referenceVideoUrl, submissionVideoUrl }: Props) {
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const referenceRef = useRef<HTMLVideoElement | null>(null);
@@ -57,7 +64,7 @@ export function IssueSideBySide({ issues, referenceVideoUrl, submissionVideoUrl 
             <article key={issue.id} className="rounded-2xl border border-white/15 bg-[#161922] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">{issue.jointName}</p>
+                  <p className="text-sm font-semibold text-white">{formatJointName(issue.jointName)}</p>
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                     {formatTimestampMs(issue.timestampMs)}
                   </p>
