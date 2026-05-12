@@ -236,6 +236,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
         />
 
         <IssueSideBySide
+          analysisId={analysis.id}
           issues={issues.map((issue) => ({
             id: issue.id,
             timestampMs: issue.timestamp_ms,

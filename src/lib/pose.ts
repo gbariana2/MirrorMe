@@ -41,6 +41,7 @@ export type PoseComparisonResult = {
   alignmentOffsetMs: number;
   alignedFrameCount: number;
   averageDelta: number;
+  mirrorMode: "original" | "mirrored";
 };
 
 const JOINT_DEFINITIONS = [
@@ -100,11 +101,11 @@ const JOINT_DEFINITIONS = [
   },
 ];
 
-const OFFSET_CANDIDATES_MS = [-2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000];
+const OFFSET_CANDIDATES_MS = Array.from({ length: 65 }, (_, index) => -8000 + index * 250);
 const MATCH_TOLERANCE_MS = 600;
 const VERY_MAJOR_THRESHOLD = 60;
 const ACTIVITY_START_THRESHOLD = 0.06;
-const ACTIVE_FRAME_MOTION_THRESHOLD = 0.03;
+const ACTIVE_FRAME_MOTION_THRESHOLD = 0.015;
 const START_STREAK_FRAMES = 2;
 
 function toDegrees(radians: number) {
@@ -318,6 +319,16 @@ function evaluateOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFram
       continue;
     }
 
+    const referenceIndex = referenceFrames.findIndex((frame) => frame.timestampMs === referenceFrame.timestampMs);
+    const submissionIndex = submissionFrames.findIndex((frame) => frame.timestampMs === submissionFrame.timestampMs);
+    const previousReferenceFrame = referenceIndex > 0 ? referenceFrames[referenceIndex - 1] ?? null : null;
+    const previousSubmissionFrame = submissionIndex > 0 ? submissionFrames[submissionIndex - 1] ?? null : null;
+    const activePair =
+      isActiveFrame(referenceFrame, previousReferenceFrame) && isActiveFrame(submissionFrame, previousSubmissionFrame);
+    if (!activePair) {
+      continue;
+    }
+
     let comparableJointCount = 0;
 
     for (const definition of JOINT_DEFINITIONS) {
@@ -374,9 +385,41 @@ function getBestAlignmentOffset(referenceFrames: PoseFrame[], submissionFrames: 
   return bestCandidate;
 }
 
-export function comparePoseFrames(
+function mirrorSubmissionFrames(frames: PoseFrame[]) {
+  const swapPairs: Array<[number, number]> = [
+    [POSE_LANDMARK_NAMES.leftShoulder, POSE_LANDMARK_NAMES.rightShoulder],
+    [POSE_LANDMARK_NAMES.leftElbow, POSE_LANDMARK_NAMES.rightElbow],
+    [POSE_LANDMARK_NAMES.leftWrist, POSE_LANDMARK_NAMES.rightWrist],
+    [POSE_LANDMARK_NAMES.leftHip, POSE_LANDMARK_NAMES.rightHip],
+    [POSE_LANDMARK_NAMES.leftKnee, POSE_LANDMARK_NAMES.rightKnee],
+    [POSE_LANDMARK_NAMES.leftAnkle, POSE_LANDMARK_NAMES.rightAnkle],
+  ];
+
+  return frames.map((frame) => {
+    const mirroredLandmarks = frame.landmarks.map((point) => ({
+      ...point,
+      x: 1 - point.x,
+    }));
+    for (const [leftIndex, rightIndex] of swapPairs) {
+      const leftPoint = mirroredLandmarks[leftIndex];
+      const rightPoint = mirroredLandmarks[rightIndex];
+      if (!leftPoint || !rightPoint) {
+        continue;
+      }
+      mirroredLandmarks[leftIndex] = rightPoint;
+      mirroredLandmarks[rightIndex] = leftPoint;
+    }
+    return {
+      ...frame,
+      landmarks: mirroredLandmarks,
+    };
+  });
+}
+
+function comparePoseFramesCore(
   referenceFrames: PoseFrame[],
   submissionFrames: PoseFrame[],
+  mirrorMode: "original" | "mirrored",
 ): PoseComparisonResult {
   const normalizedReference = normalizeFramesFromDanceStart(referenceFrames).frames;
   const normalizedSubmission = normalizeFramesFromDanceStart(submissionFrames).frames;
@@ -384,6 +427,8 @@ export function comparePoseFrames(
   const issues: PoseIssue[] = [];
   let weightedDeltaSum = 0;
   let weightedJointCount = 0;
+  let comparableJointSamples = 0;
+  const latestIssueByJoint = new Map<string, number>();
 
   for (const referenceFrame of normalizedReference) {
     const submissionFrame = getClosestFrame(
@@ -399,7 +444,7 @@ export function comparePoseFrames(
     const previousReferenceFrame = referenceIndex > 0 ? normalizedReference[referenceIndex - 1] ?? null : null;
     const previousSubmissionFrame = submissionIndex > 0 ? normalizedSubmission[submissionIndex - 1] ?? null : null;
     const activePair =
-      isActiveFrame(referenceFrame, previousReferenceFrame) || isActiveFrame(submissionFrame, previousSubmissionFrame);
+      isActiveFrame(referenceFrame, previousReferenceFrame) && isActiveFrame(submissionFrame, previousSubmissionFrame);
     if (!activePair) {
       continue;
     }
@@ -420,10 +465,17 @@ export function comparePoseFrames(
       const delta = rawDelta * cameraFactor;
       weightedJointCount += definition.weight;
       weightedDeltaSum += delta * definition.weight;
+      comparableJointSamples += 1;
 
       if (delta < VERY_MAJOR_THRESHOLD) {
         continue;
       }
+
+      const lastIssueTimestamp = latestIssueByJoint.get(definition.jointName) ?? Number.NEGATIVE_INFINITY;
+      if (referenceFrame.timestampMs - lastIssueTimestamp < 3000) {
+        continue;
+      }
+      latestIssueByJoint.set(definition.jointName, referenceFrame.timestampMs);
 
       issues.push({
         timestampMs: referenceFrame.timestampMs,
@@ -440,14 +492,14 @@ export function comparePoseFrames(
   const averageDelta =
     weightedJointCount === 0 ? 0 : roundToTwoDecimals(weightedDeltaSum / weightedJointCount);
 
-  const issuePenalty = issues.reduce((sum, issue) => {
-    return sum + (issue.severity === "major" ? 8.5 : 0);
-  }, 0);
-  const deltaPenalty = averageDelta * 1.35;
+  const totalJointCapacity = Math.max(1, comparableJointSamples);
+  const issueRate = issues.length / totalJointCapacity;
+  const issuePenalty = Math.min(24, issueRate * 160);
+  const deltaPenalty = averageDelta * 1.05;
   const coveragePenalty =
     alignment.alignedFrameCount === 0
       ? 35
-      : Math.max(0, normalizedReference.length - alignment.alignedFrameCount) * 2.5;
+      : Math.max(0, normalizedReference.length - alignment.alignedFrameCount) * 0.75;
   const overallScore = Math.max(
     0,
     roundToTwoDecimals(100 - deltaPenalty - issuePenalty - coveragePenalty),
@@ -459,5 +511,25 @@ export function comparePoseFrames(
     alignmentOffsetMs: alignment.offsetMs,
     alignedFrameCount: alignment.alignedFrameCount,
     averageDelta,
+    mirrorMode,
   };
+}
+
+export function comparePoseFrames(
+  referenceFrames: PoseFrame[],
+  submissionFrames: PoseFrame[],
+): PoseComparisonResult {
+  const original = comparePoseFramesCore(referenceFrames, submissionFrames, "original");
+  const mirrored = comparePoseFramesCore(referenceFrames, mirrorSubmissionFrames(submissionFrames), "mirrored");
+
+  if (mirrored.overallScore > original.overallScore + 4) {
+    return mirrored;
+  }
+  if (
+    mirrored.overallScore >= original.overallScore
+    && mirrored.issues.length <= original.issues.length
+  ) {
+    return mirrored;
+  }
+  return original;
 }

@@ -235,10 +235,14 @@ export function PoseAnalysisPanel({
       );
 
       const comparison = comparePoseFrames(referenceResult.frames, submissionResult.frames);
+      const mirrorNote =
+        comparison.mirrorMode === "mirrored"
+          ? " Mirror orientation was detected and auto-corrected during alignment."
+          : "";
       const nextSummary =
         comparison.issues.length === 0
-          ? `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)} and did not flag any critical joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.`
-          : `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)}, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} critical issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.`;
+          ? `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)} and did not flag any critical joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.${mirrorNote}`
+          : `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)}, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} critical issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.${mirrorNote}`;
 
       const processResponse = await fetch(`/api/analyses/${analysisId}/process`, {
         method: "POST",
