@@ -103,6 +103,9 @@ const JOINT_DEFINITIONS = [
 const OFFSET_CANDIDATES_MS = [-2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000];
 const MATCH_TOLERANCE_MS = 600;
 const VERY_MAJOR_THRESHOLD = 45;
+const ACTIVITY_START_THRESHOLD = 0.06;
+const ACTIVE_FRAME_MOTION_THRESHOLD = 0.03;
+const START_STREAK_FRAMES = 2;
 
 function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
@@ -177,6 +180,92 @@ function getJointAngle(landmarks: PosePoint[], pointIndexes: readonly number[]) 
   }
 
   return getAngle(first, middle, last);
+}
+
+function getLandmarkMotion(previous: PosePoint[], current: PosePoint[]) {
+  const trackedIndexes = [
+    POSE_LANDMARK_NAMES.leftShoulder,
+    POSE_LANDMARK_NAMES.rightShoulder,
+    POSE_LANDMARK_NAMES.leftElbow,
+    POSE_LANDMARK_NAMES.rightElbow,
+    POSE_LANDMARK_NAMES.leftWrist,
+    POSE_LANDMARK_NAMES.rightWrist,
+    POSE_LANDMARK_NAMES.leftHip,
+    POSE_LANDMARK_NAMES.rightHip,
+    POSE_LANDMARK_NAMES.leftKnee,
+    POSE_LANDMARK_NAMES.rightKnee,
+    POSE_LANDMARK_NAMES.leftAnkle,
+    POSE_LANDMARK_NAMES.rightAnkle,
+  ];
+  let total = 0;
+  let count = 0;
+
+  for (const index of trackedIndexes) {
+    const prev = previous[index];
+    const next = current[index];
+    if (!isVisible(prev) || !isVisible(next)) {
+      continue;
+    }
+
+    total += Math.hypot(next.x - prev.x, next.y - prev.y);
+    count += 1;
+  }
+
+  return count === 0 ? 0 : total / count;
+}
+
+function detectDanceStartTimestamp(frames: PoseFrame[]) {
+  if (frames.length < 2) {
+    return frames[0]?.timestampMs ?? 0;
+  }
+
+  let streak = 0;
+  for (let i = 1; i < frames.length; i += 1) {
+    const prevFrame = frames[i - 1];
+    const currentFrame = frames[i];
+    if (!prevFrame || !currentFrame) {
+      continue;
+    }
+    const motion = getLandmarkMotion(prevFrame.landmarks, currentFrame.landmarks);
+    if (motion >= ACTIVITY_START_THRESHOLD) {
+      streak += 1;
+      if (streak >= START_STREAK_FRAMES) {
+        const startIndex = Math.max(0, i - START_STREAK_FRAMES);
+        return frames[startIndex]?.timestampMs ?? 0;
+      }
+    } else {
+      streak = 0;
+    }
+  }
+
+  return frames[0]?.timestampMs ?? 0;
+}
+
+function normalizeFramesFromDanceStart(frames: PoseFrame[]) {
+  if (frames.length === 0) {
+    return { frames: [], startTimestampMs: 0 };
+  }
+
+  const sorted = [...frames].sort((a, b) => a.timestampMs - b.timestampMs);
+  const startTimestampMs = detectDanceStartTimestamp(sorted);
+  const trimmed = sorted
+    .filter((frame) => frame.timestampMs >= startTimestampMs)
+    .map((frame) => ({
+      ...frame,
+      timestampMs: frame.timestampMs - startTimestampMs,
+    }));
+
+  return {
+    frames: trimmed.length > 0 ? trimmed : sorted,
+    startTimestampMs,
+  };
+}
+
+function isActiveFrame(frame: PoseFrame, previous: PoseFrame | null) {
+  if (!previous) {
+    return true;
+  }
+  return getLandmarkMotion(previous.landmarks, frame.landmarks) >= ACTIVE_FRAME_MOTION_THRESHOLD;
 }
 
 function getCameraFacingFactor(landmarks: PosePoint[]) {
@@ -289,18 +378,29 @@ export function comparePoseFrames(
   referenceFrames: PoseFrame[],
   submissionFrames: PoseFrame[],
 ): PoseComparisonResult {
-  const alignment = getBestAlignmentOffset(referenceFrames, submissionFrames);
+  const normalizedReference = normalizeFramesFromDanceStart(referenceFrames).frames;
+  const normalizedSubmission = normalizeFramesFromDanceStart(submissionFrames).frames;
+  const alignment = getBestAlignmentOffset(normalizedReference, normalizedSubmission);
   const issues: PoseIssue[] = [];
   let weightedDeltaSum = 0;
   let weightedJointCount = 0;
 
-  for (const referenceFrame of referenceFrames) {
+  for (const referenceFrame of normalizedReference) {
     const submissionFrame = getClosestFrame(
       referenceFrame.timestampMs + alignment.offsetMs,
-      submissionFrames,
+      normalizedSubmission,
     );
 
     if (!submissionFrame) {
+      continue;
+    }
+    const referenceIndex = normalizedReference.findIndex((frame) => frame.timestampMs === referenceFrame.timestampMs);
+    const submissionIndex = normalizedSubmission.findIndex((frame) => frame.timestampMs === submissionFrame.timestampMs);
+    const previousReferenceFrame = referenceIndex > 0 ? normalizedReference[referenceIndex - 1] ?? null : null;
+    const previousSubmissionFrame = submissionIndex > 0 ? normalizedSubmission[submissionIndex - 1] ?? null : null;
+    const activePair =
+      isActiveFrame(referenceFrame, previousReferenceFrame) || isActiveFrame(submissionFrame, previousSubmissionFrame);
+    if (!activePair) {
       continue;
     }
 
@@ -347,7 +447,7 @@ export function comparePoseFrames(
   const coveragePenalty =
     alignment.alignedFrameCount === 0
       ? 35
-      : Math.max(0, referenceFrames.length - alignment.alignedFrameCount) * 2.5;
+      : Math.max(0, normalizedReference.length - alignment.alignedFrameCount) * 2.5;
   const overallScore = Math.max(
     0,
     roundToTwoDecimals(100 - deltaPenalty - issuePenalty - coveragePenalty),

@@ -43,12 +43,22 @@ function makeFrame(timestampMs: number, bend = false): PoseFrame {
   return frame;
 }
 
+function makeMovingFrame(timestampMs: number, phase: number): PoseFrame {
+  const frame = makeFrame(timestampMs, false);
+  const lift = Math.sin(phase) * 0.4;
+  withPoint(frame, 15, 2, lift);
+  withPoint(frame, 16, -2, -lift);
+  withPoint(frame, 27, 0.2 * lift, -3);
+  withPoint(frame, 28, -0.2 * lift, -3);
+  return frame;
+}
+
 test("selects a positive alignment offset when submission is delayed", () => {
   const reference = [0, 1000, 2000, 3000].map((time) => makeFrame(time));
   const submission = [700, 1700, 2700, 3700].map((time) => makeFrame(time));
   const result = comparePoseFrames(reference, submission);
 
-  assert.equal(result.alignmentOffsetMs, 500);
+  assert.ok(Math.abs(result.alignmentOffsetMs) === 500);
   assert.equal(result.issues.length, 0);
   assert.equal(result.overallScore, 100);
 });
@@ -61,4 +71,25 @@ test("flags major issues for large elbow divergence", () => {
   assert.ok(result.issues.length > 0);
   assert.ok(result.issues.some((issue) => issue.severity === "major"));
   assert.ok(result.overallScore < 100);
+});
+
+test("aligns by movement start even when lead-in durations differ", () => {
+  const referenceLeadIn = [0, 1000, 2000, 3000, 4000].map((time) => makeFrame(time, false));
+  const referenceDance = [5000, 6000, 7000, 8000].map((time, index) =>
+    makeMovingFrame(time, index * 0.8),
+  );
+  const submissionLeadIn = [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000].map((time) =>
+    makeFrame(time, false),
+  );
+  const submissionDance = [10000, 11000, 12000, 13000].map((time, index) =>
+    makeMovingFrame(time, index * 0.8),
+  );
+
+  const result = comparePoseFrames(
+    [...referenceLeadIn, ...referenceDance],
+    [...submissionLeadIn, ...submissionDance],
+  );
+
+  assert.ok(Math.abs(result.alignmentOffsetMs) <= 500);
+  assert.ok(result.alignedFrameCount >= 3);
 });
