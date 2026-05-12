@@ -185,6 +185,7 @@ export function IssueSideBySide({
   const [activeIssue, setActiveIssue] = useState<Issue | null>(null);
   const [frameData, setFrameData] = useState<FramePayload | null>(null);
   const [frameError, setFrameError] = useState<string | null>(null);
+  const [isFrameLoading, setIsFrameLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const referenceRef = useRef<HTMLVideoElement | null>(null);
   const submissionRef = useRef<HTMLVideoElement | null>(null);
@@ -235,6 +236,11 @@ export function IssueSideBySide({
           return;
         }
         setFrameError(error instanceof Error ? error.message : "Failed to load frame data.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsFrameLoading(false);
+        }
       });
 
     return () => controller.abort();
@@ -283,7 +289,12 @@ export function IssueSideBySide({
                 </div>
                 <button
                   type="button"
-              onClick={() => setActiveIssue(issue)}
+                  onClick={() => {
+                    setFrameData(null);
+                    setFrameError(null);
+                    setIsFrameLoading(true);
+                    setActiveIssue(issue);
+                  }}
                   className="rounded-full border border-[#8fd4ff]/55 px-3 py-1 text-xs font-semibold text-[#8fd4ff]"
                 >
                   View side-by-side
@@ -307,6 +318,7 @@ export function IssueSideBySide({
                 setActiveIssue(null);
                 setFrameData(null);
                 setFrameError(null);
+                setIsFrameLoading(false);
               }}
               className="text-xs font-semibold text-[#8fd4ff] underline"
             >
@@ -322,6 +334,7 @@ export function IssueSideBySide({
           <div className="mt-4 rounded-xl border border-white/15 bg-[#101625] p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Pose Map</p>
             <p className="mt-1 text-xs text-slate-400">Green = relatively aligned. Red = high deviation pivots/connectors.</p>
+            {isFrameLoading ? <p className="mt-2 text-xs text-slate-300">Loading pose frame...</p> : null}
             {frameError ? <p className="mt-2 text-xs text-rose-300">{frameError}</p> : null}
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <canvas ref={referenceCanvasRef} width={360} height={240} className="w-full rounded-lg bg-[#0a1020]" />

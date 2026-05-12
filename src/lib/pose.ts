@@ -386,6 +386,16 @@ function getBestAlignmentOffset(referenceFrames: PoseFrame[], submissionFrames: 
 }
 
 function mirrorSubmissionFrames(frames: PoseFrame[]) {
+  return frames.map((frame) => ({
+    ...frame,
+    landmarks: frame.landmarks.map((point) => ({
+      ...point,
+      x: 1 - point.x,
+    })),
+  }));
+}
+
+function mirrorAndSwapSubmissionFrames(frames: PoseFrame[]) {
   const swapPairs: Array<[number, number]> = [
     [POSE_LANDMARK_NAMES.leftShoulder, POSE_LANDMARK_NAMES.rightShoulder],
     [POSE_LANDMARK_NAMES.leftElbow, POSE_LANDMARK_NAMES.rightElbow],
@@ -521,15 +531,24 @@ export function comparePoseFrames(
 ): PoseComparisonResult {
   const original = comparePoseFramesCore(referenceFrames, submissionFrames, "original");
   const mirrored = comparePoseFramesCore(referenceFrames, mirrorSubmissionFrames(submissionFrames), "mirrored");
+  const mirroredSwap = comparePoseFramesCore(
+    referenceFrames,
+    mirrorAndSwapSubmissionFrames(submissionFrames),
+    "mirrored",
+  );
+  const mirroredBest =
+    mirroredSwap.overallScore > mirrored.overallScore || mirroredSwap.issues.length < mirrored.issues.length
+      ? mirroredSwap
+      : mirrored;
 
-  if (mirrored.overallScore > original.overallScore + 4) {
-    return mirrored;
+  if (mirroredBest.overallScore > original.overallScore + 4) {
+    return mirroredBest;
   }
   if (
-    mirrored.overallScore >= original.overallScore
-    && mirrored.issues.length <= original.issues.length
+    mirroredBest.overallScore >= original.overallScore
+    && mirroredBest.issues.length <= original.issues.length
   ) {
-    return mirrored;
+    return mirroredBest;
   }
   return original;
 }

@@ -50,7 +50,42 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (!nearbyFrames || nearbyFrames.length === 0) {
-      return NextResponse.json({ error: "No pose frame found for this timestamp." }, { status: 404 });
+      const [{ data: beforeRows, error: beforeError }, { data: afterRows, error: afterError }] = await Promise.all([
+        supabase
+          .from("analysis_frames")
+          .select("timestamp_ms, reference_landmarks, submission_landmarks")
+          .eq("analysis_id", id)
+          .lte("timestamp_ms", timestampMs)
+          .order("timestamp_ms", { ascending: false })
+          .limit(1),
+        supabase
+          .from("analysis_frames")
+          .select("timestamp_ms, reference_landmarks, submission_landmarks")
+          .eq("analysis_id", id)
+          .gte("timestamp_ms", timestampMs)
+          .order("timestamp_ms", { ascending: true })
+          .limit(1),
+      ]);
+
+      if (beforeError || afterError) {
+        throw beforeError ?? afterError;
+      }
+
+      const candidates = [...(beforeRows ?? []), ...(afterRows ?? [])];
+      if (candidates.length === 0) {
+        return NextResponse.json({ error: "No pose frame found for this timestamp." }, { status: 404 });
+      }
+      const nearestFallback = candidates.reduce((best, current) => {
+        const bestDistance = Math.abs(best.timestamp_ms - timestampMs);
+        const currentDistance = Math.abs(current.timestamp_ms - timestampMs);
+        return currentDistance < bestDistance ? current : best;
+      });
+
+      return NextResponse.json({
+        timestampMs: nearestFallback.timestamp_ms,
+        referenceLandmarks: nearestFallback.reference_landmarks,
+        submissionLandmarks: nearestFallback.submission_landmarks,
+      });
     }
 
     const nearest = nearbyFrames.reduce((best, current) => {
