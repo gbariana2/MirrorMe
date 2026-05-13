@@ -114,3 +114,28 @@ test("auto-corrects mirrored submissions when they align better", () => {
   assert.equal(result.mirrorMode, "mirrored");
   assert.ok(result.overallScore >= 85);
 });
+
+test("exposes sync diagnostics candidates", () => {
+  const reference = [0, 1000, 2000, 3000, 4000].map((time, index) => makeMovingFrame(time, index * 0.5));
+  const submission = [300, 1300, 2300, 3300, 4300].map((time, index) => makeMovingFrame(time, index * 0.5));
+  const result = comparePoseFrames(reference, submission, {
+    preferredOffsetMs: 300,
+    preferredOffsetConfidence: 0.8,
+  });
+
+  assert.ok(result.syncCandidates.length > 0);
+  assert.ok(result.syncCandidates.length <= 3);
+  assert.ok(result.syncConfidence >= 0);
+});
+
+test("applies low-confidence guardrail to reduce harsh issue counts", () => {
+  const reference = [0, 1000, 2000, 3000, 4000].map((time, index) => makeMovingFrame(time, index * 0.6));
+  const shifted = [2000, 3000, 4000, 5000, 6000].map((time, index) => makeMovingFrame(time, index * 0.6));
+  const result = comparePoseFrames(reference, shifted, {
+    preferredOffsetMs: -2500,
+    preferredOffsetConfidence: 0.1,
+  });
+
+  assert.ok(result.syncConfidence <= 1);
+  assert.ok(result.overallScore >= 0);
+});

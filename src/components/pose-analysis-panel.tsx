@@ -30,6 +30,17 @@ type Preview = {
   referenceImage: string;
   submissionImage: string;
 };
+type SyncDiagnostics = {
+  confidence: number;
+  method: "pose_weighted" | "pose_only";
+  selectedOffsetMs: number;
+  candidates: Array<{
+    offsetMs: number;
+    alignedFrameCount: number;
+    averageDelta: number;
+    score: number;
+  }>;
+} | null;
 
 function formatTimestampMs(timestampMs: number) {
   const totalSeconds = Math.max(0, Math.floor(timestampMs / 1000));
@@ -124,7 +135,138 @@ function drawPosePreview(
   return canvas.toDataURL("image/jpeg", 0.8);
 }
 
-async function estimateAudioOffsetMs(referenceUrl: string, submissionUrl: string) {
+type AudioAlignment = {
+  offsetMs: number;
+  confidence: number;
+  method: "hybrid" | "correlation" | "onset";
+};
+
+function percentile(sortedValues: number[], ratio: number) {
+  if (sortedValues.length === 0) {
+    return 0;
+  }
+  const index = Math.min(sortedValues.length - 1, Math.max(0, Math.floor(ratio * sortedValues.length)));
+  return sortedValues[index] ?? 0;
+}
+
+function buildRmsEnvelope(samples: Float32Array, sampleRate: number, windowMs: number, hopMs: number) {
+  const windowSize = Math.max(16, Math.floor((sampleRate * windowMs) / 1000));
+  const hopSize = Math.max(8, Math.floor((sampleRate * hopMs) / 1000));
+  const envelope: number[] = [];
+  for (let start = 0; start + windowSize <= samples.length; start += hopSize) {
+    let sum = 0;
+    for (let i = start; i < start + windowSize; i += 1) {
+      const value = samples[i] ?? 0;
+      sum += value * value;
+    }
+    envelope.push(Math.sqrt(sum / windowSize));
+  }
+  return envelope;
+}
+
+function zNormalize(values: number[]) {
+  if (values.length === 0) {
+    return values;
+  }
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+  const std = Math.sqrt(variance);
+  if (std <= 1e-6) {
+    return values.map(() => 0);
+  }
+  return values.map((value) => (value - mean) / std);
+}
+
+function findOnsetOffsetMs(referenceEnvelope: number[], submissionEnvelope: number[], hopMs: number) {
+  const detectOnsetIndex = (series: number[]) => {
+    if (series.length < 6) {
+      return null;
+    }
+    const sorted = [...series].sort((a, b) => a - b);
+    const median = percentile(sorted, 0.5);
+    const p90 = percentile(sorted, 0.9);
+    const threshold = median + (p90 - median) * 0.35;
+    let streak = 0;
+    for (let i = 0; i < series.length; i += 1) {
+      if ((series[i] ?? 0) >= threshold) {
+        streak += 1;
+        if (streak >= 4) {
+          return i - 3;
+        }
+      } else {
+        streak = 0;
+      }
+    }
+    return null;
+  };
+
+  const refOnset = detectOnsetIndex(referenceEnvelope);
+  const subOnset = detectOnsetIndex(submissionEnvelope);
+  if (refOnset === null || subOnset === null) {
+    return null;
+  }
+  const offsetMs = (subOnset - refOnset) * hopMs;
+  return {
+    offsetMs,
+    confidence: 0.6,
+  };
+}
+
+function findCorrelationOffsetMs(referenceEnvelope: number[], submissionEnvelope: number[], hopMs: number) {
+  const normalizedReference = zNormalize(referenceEnvelope);
+  const normalizedSubmission = zNormalize(submissionEnvelope);
+  if (normalizedReference.length < 20 || normalizedSubmission.length < 20) {
+    return null;
+  }
+
+  const maxLagSteps = Math.floor(3000 / hopMs);
+  let bestLag = 0;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  let secondBest = Number.NEGATIVE_INFINITY;
+
+  for (let lag = -maxLagSteps; lag <= maxLagSteps; lag += 1) {
+    let dot = 0;
+    let refNorm = 0;
+    let subNorm = 0;
+    let count = 0;
+    for (let i = 0; i < normalizedReference.length; i += 1) {
+      const j = i + lag;
+      if (j < 0 || j >= normalizedSubmission.length) {
+        continue;
+      }
+      const ref = normalizedReference[i] ?? 0;
+      const sub = normalizedSubmission[j] ?? 0;
+      dot += ref * sub;
+      refNorm += ref * ref;
+      subNorm += sub * sub;
+      count += 1;
+    }
+    if (count < 25 || refNorm <= 0 || subNorm <= 0) {
+      continue;
+    }
+    const score = dot / Math.sqrt(refNorm * subNorm);
+    if (score > bestScore) {
+      secondBest = bestScore;
+      bestScore = score;
+      bestLag = lag;
+    } else if (score > secondBest) {
+      secondBest = score;
+    }
+  }
+
+  if (!Number.isFinite(bestScore)) {
+    return null;
+  }
+
+  const separation = Number.isFinite(secondBest) ? Math.max(0, bestScore - secondBest) : 0;
+  const confidence = Math.max(0, Math.min(1, bestScore * 0.75 + Math.min(0.25, separation * 2.5)));
+  return {
+    offsetMs: -bestLag * hopMs,
+    confidence: Math.round(confidence * 100) / 100,
+  };
+}
+
+async function estimateAudioOffsetMs(referenceUrl: string, submissionUrl: string): Promise<AudioAlignment | null> {
   const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextCtor) {
     return null;
@@ -147,10 +289,6 @@ async function estimateAudioOffsetMs(referenceUrl: string, submissionUrl: string
       audioContext.decodeAudioData(submissionBytes.slice(0)),
     ]);
 
-    const sampleRate = Math.min(referenceBuffer.sampleRate, submissionBuffer.sampleRate);
-    const step = Math.max(1, Math.floor(sampleRate * 0.05)); // 50ms windows
-    const maxLagWindows = Math.floor(3000 / 50); // +/- 3s
-
     const toMono = (buffer: AudioBuffer) => {
       const channel = buffer.numberOfChannels > 0 ? buffer.getChannelData(0) : new Float32Array(0);
       return channel;
@@ -158,69 +296,43 @@ async function estimateAudioOffsetMs(referenceUrl: string, submissionUrl: string
 
     const refMono = toMono(referenceBuffer);
     const subMono = toMono(submissionBuffer);
-
-    const buildEnergy = (samples: Float32Array) => {
-      const energy: number[] = [];
-      for (let i = 0; i + step <= samples.length; i += step) {
-        let sum = 0;
-        for (let j = i; j < i + step; j += 1) {
-          const sample = samples[j] ?? 0;
-          sum += sample * sample;
-        }
-        energy.push(Math.sqrt(sum / step));
-      }
-      return energy;
-    };
-
-    const refEnergy = buildEnergy(refMono);
-    const subEnergy = buildEnergy(subMono);
+    const sampleRate = Math.min(referenceBuffer.sampleRate, submissionBuffer.sampleRate);
+    const hopMs = 20;
+    const refEnergy = buildRmsEnvelope(refMono, sampleRate, 40, hopMs);
+    const subEnergy = buildRmsEnvelope(subMono, sampleRate, 40, hopMs);
     if (refEnergy.length < 10 || subEnergy.length < 10) {
       return null;
     }
 
-    let bestLag = 0;
-    let bestCost = Number.POSITIVE_INFINITY;
-    let secondBestCost = Number.POSITIVE_INFINITY;
+    const onset = findOnsetOffsetMs(refEnergy, subEnergy, hopMs);
+    const correlation = findCorrelationOffsetMs(refEnergy, subEnergy, hopMs);
 
-    for (let lag = -maxLagWindows; lag <= maxLagWindows; lag += 1) {
-      let total = 0;
-      let count = 0;
-      for (let i = 0; i < refEnergy.length; i += 1) {
-        const j = i + lag;
-        if (j < 0 || j >= subEnergy.length) {
-          continue;
-        }
-        total += Math.abs((refEnergy[i] ?? 0) - (subEnergy[j] ?? 0));
-        count += 1;
+    if (onset && correlation) {
+      const divergenceMs = Math.abs(onset.offsetMs - correlation.offsetMs);
+      if (divergenceMs <= 500) {
+        const totalWeight = onset.confidence + correlation.confidence;
+        const combinedOffset = Math.round(
+          (onset.offsetMs * onset.confidence + correlation.offsetMs * correlation.confidence) / Math.max(totalWeight, 1e-6),
+        );
+        const agreementBoost = Math.max(0, 1 - divergenceMs / 500) * 0.2;
+        return {
+          offsetMs: combinedOffset,
+          confidence: Math.min(1, Math.round((Math.max(onset.confidence, correlation.confidence) + agreementBoost) * 100) / 100),
+          method: "hybrid",
+        };
       }
-      if (count < 20) {
-        continue;
-      }
-      const avg = total / count;
-      if (avg < bestCost) {
-        secondBestCost = bestCost;
-        bestCost = avg;
-        bestLag = lag;
-      } else if (avg < secondBestCost) {
-        secondBestCost = avg;
-      }
+      return correlation.confidence >= onset.confidence
+        ? { ...correlation, method: "correlation" }
+        : { ...onset, method: "onset" };
     }
 
-    if (!Number.isFinite(bestCost)) {
-      return null;
+    if (correlation) {
+      return { ...correlation, method: "correlation" };
     }
-
-    const separation =
-      Number.isFinite(secondBestCost) && secondBestCost > 0
-        ? Math.max(0, Math.min(1, (secondBestCost - bestCost) / secondBestCost))
-        : 0;
-    const confidence = Math.round((0.35 + separation * 0.65) * 100) / 100;
-
-    // Positive means submission is later than reference.
-    return {
-      offsetMs: -bestLag * 50,
-      confidence,
-    };
+    if (onset) {
+      return { ...onset, method: "onset" };
+    }
+    return null;
   } catch {
     return null;
   } finally {
@@ -284,6 +396,7 @@ export function PoseAnalysisPanel({
   const [score, setScore] = useState<number | null>(null);
   const [issueCount, setIssueCount] = useState(existingIssueCount);
   const [previews, setPreviews] = useState<Preview[]>([]);
+  const [syncDiagnostics, setSyncDiagnostics] = useState<SyncDiagnostics>(null);
   const hasAutoTriggeredRef = useRef(false);
 
   const isConfigured = useMemo(() => {
@@ -350,13 +463,14 @@ export function PoseAnalysisPanel({
       const audioNote =
         audioAlignment === null
           ? ""
-          : ` Audio correlation suggested ${formatOffsetMs(audioAlignment.offsetMs)} (confidence ${Math.round(
+          : ` Audio sync (${audioAlignment.method}) suggested ${formatOffsetMs(audioAlignment.offsetMs)} (confidence ${Math.round(
               audioAlignment.confidence * 100,
             )}%).`;
+      const syncNote = ` Final sync used ${formatOffsetMs(comparison.alignmentOffsetMs)} (${comparison.syncMethod.replace("_", " ")}; confidence ${Math.round(comparison.syncConfidence * 100)}%).`;
       const nextSummary =
         comparison.issues.length === 0
-          ? `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)} and did not flag any critical joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.${mirrorNote}${audioNote}`
-          : `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)}, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} critical issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.${mirrorNote}${audioNote}`;
+          ? `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)} and did not flag any critical joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.${mirrorNote}${audioNote}${syncNote}`
+          : `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)}, compared ${comparison.alignedFrameCount} sampled frames, and flagged ${comparison.issues.length} critical issue${comparison.issues.length === 1 ? "" : "s"} with an average weighted joint delta of ${comparison.averageDelta} degrees.${mirrorNote}${audioNote}${syncNote}`;
 
       const processResponse = await fetch(`/api/analyses/${analysisId}/process`, {
         method: "POST",
@@ -387,6 +501,12 @@ export function PoseAnalysisPanel({
       setIssueCount(comparison.issues.length);
       setScore(comparison.overallScore);
       setSummary(nextSummary);
+      setSyncDiagnostics({
+        confidence: comparison.syncConfidence,
+        method: comparison.syncMethod,
+        selectedOffsetMs: comparison.alignmentOffsetMs,
+        candidates: comparison.syncCandidates,
+      });
       router.refresh();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Pose analysis failed.");
@@ -458,6 +578,22 @@ export function PoseAnalysisPanel({
       {summary ? (
         <div className="mt-6 rounded-2xl border border-emerald-300/35 bg-emerald-500/10 px-4 py-4 text-sm leading-6 text-emerald-200">
           {summary}
+        </div>
+      ) : null}
+
+      {syncDiagnostics ? (
+        <div className="mt-6 rounded-2xl border border-white/15 bg-[#161922] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sync diagnostics</p>
+          <p className="mt-2 text-sm text-slate-200">
+            Selected offset: {formatOffsetMs(syncDiagnostics.selectedOffsetMs)} | Method: {syncDiagnostics.method.replace("_", " ")} | Confidence: {Math.round(syncDiagnostics.confidence * 100)}%
+          </p>
+          <div className="mt-3 space-y-2">
+            {syncDiagnostics.candidates.map((candidate, index) => (
+              <p key={`${candidate.offsetMs}-${index}`} className="text-xs text-slate-300">
+                #{index + 1}: {formatOffsetMs(candidate.offsetMs)} | aligned {candidate.alignedFrameCount} frames | avg delta {candidate.averageDelta} | score {candidate.score}
+              </p>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -45,6 +45,13 @@ export type PoseComparisonResult = {
   alignedReferenceFrames: PoseFrame[];
   alignedSubmissionFrames: PoseFrame[];
   syncConfidence: number;
+  syncMethod: "pose_weighted" | "pose_only";
+  syncCandidates: Array<{
+    offsetMs: number;
+    alignedFrameCount: number;
+    averageDelta: number;
+    score: number;
+  }>;
 };
 
 type CompareOptions = {
@@ -644,6 +651,12 @@ function getBestAlignmentOffset(
     averageDelta: Number.POSITIVE_INFINITY,
     tieBreakCost: Number.POSITIVE_INFINITY,
   };
+  const rankedCandidates: Array<{
+    offsetMs: number;
+    alignedFrameCount: number;
+    averageDelta: number;
+    tieBreakCost: number;
+  }> = [];
 
   for (const offsetMs of weightedCandidates) {
     const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
@@ -654,6 +667,7 @@ function getBestAlignmentOffset(
     const dtwPenalty = Math.abs(offsetMs - dtwAlignment.offsetMs) * dtwConfidence * 0.018;
     const energyPenalty = Math.abs(offsetMs - energyOffset) * 0.01;
     const tieBreakCost = candidate.averageDelta + audioPenalty + dtwPenalty + energyPenalty;
+    rankedCandidates.push({ ...candidate, tieBreakCost });
 
     if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
       bestCandidate = { ...candidate, tieBreakCost };
@@ -679,6 +693,7 @@ function getBestAlignmentOffset(
     const dtwPenalty = Math.abs(offsetMs - dtwAlignment.offsetMs) * dtwConfidence * 0.018;
     const energyPenalty = Math.abs(offsetMs - energyOffset) * 0.01;
     const tieBreakCost = candidate.averageDelta + audioPenalty + dtwPenalty + energyPenalty;
+    rankedCandidates.push({ ...candidate, tieBreakCost });
     if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
       bestCandidate = { ...candidate, tieBreakCost };
       continue;
@@ -691,9 +706,29 @@ function getBestAlignmentOffset(
     }
   }
 
+  const topCandidates = rankedCandidates
+    .sort((a, b) => {
+      if (b.alignedFrameCount !== a.alignedFrameCount) {
+        return b.alignedFrameCount - a.alignedFrameCount;
+      }
+      return a.tieBreakCost - b.tieBreakCost;
+    })
+    .slice(0, 3)
+    .map((candidate) => ({
+      offsetMs: candidate.offsetMs,
+      alignedFrameCount: candidate.alignedFrameCount,
+      averageDelta: roundToTwoDecimals(candidate.averageDelta),
+      score: roundToTwoDecimals(candidate.tieBreakCost),
+    }));
+
   return {
     ...bestCandidate,
     dtwConfidence,
+    candidates: topCandidates,
+    method:
+      typeof preferredOffsetMs === "number" && Number.isFinite(preferredOffsetMs)
+        ? ("pose_weighted" as const)
+        : ("pose_only" as const),
   };
 }
 
@@ -836,6 +871,14 @@ function comparePoseFramesCore(
     0,
     roundToTwoDecimals(100 - deltaPenalty - issuePenalty - coveragePenalty),
   );
+  const syncGuardrailPenalty = alignment.dtwConfidence < 0.45 ? 8 : alignment.dtwConfidence < 0.6 ? 4 : 0;
+  const guardedScore = Math.max(0, roundToTwoDecimals(overallScore + syncGuardrailPenalty));
+  const guardedIssues =
+    alignment.dtwConfidence < 0.45
+      ? issues.filter((_issue, index) => index % 2 === 0)
+      : alignment.dtwConfidence < 0.6
+        ? issues.filter((_issue, index) => index % 3 !== 2)
+        : issues;
 
   const shiftedReference = normalizedReference.map((frame) => ({
     ...frame,
@@ -865,8 +908,8 @@ function comparePoseFramesCore(
     .filter((frame) => frame.timestampMs >= 0);
 
   return {
-    issues,
-    overallScore,
+    issues: guardedIssues,
+    overallScore: guardedScore,
     alignmentOffsetMs: alignment.offsetMs,
     alignedFrameCount: alignment.alignedFrameCount,
     averageDelta,
@@ -874,6 +917,8 @@ function comparePoseFramesCore(
     alignedReferenceFrames,
     alignedSubmissionFrames,
     syncConfidence: alignment.dtwConfidence,
+    syncMethod: alignment.method,
+    syncCandidates: alignment.candidates,
   };
 }
 
