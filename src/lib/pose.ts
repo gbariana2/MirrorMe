@@ -42,6 +42,12 @@ export type PoseComparisonResult = {
   alignedFrameCount: number;
   averageDelta: number;
   mirrorMode: "original" | "mirrored";
+  alignedReferenceFrames: PoseFrame[];
+  alignedSubmissionFrames: PoseFrame[];
+};
+
+type CompareOptions = {
+  preferredOffsetMs?: number;
 };
 
 const JOINT_DEFINITIONS = [
@@ -101,10 +107,10 @@ const JOINT_DEFINITIONS = [
   },
 ];
 
-const COARSE_OFFSET_CANDIDATES_MS = Array.from({ length: 81 }, (_, index) => -10000 + index * 250);
-const FINE_OFFSET_STEP_MS = 50;
-const FINE_OFFSET_WINDOW_MS = 400;
-const MATCH_TOLERANCE_MS = 350;
+const COARSE_OFFSET_CANDIDATES_MS = Array.from({ length: 121 }, (_, index) => -12000 + index * 200);
+const FINE_OFFSET_STEP_MS = 25;
+const FINE_OFFSET_WINDOW_MS = 500;
+const MATCH_TOLERANCE_MS = 180;
 const VERY_MAJOR_THRESHOLD = 60;
 const ACTIVITY_START_THRESHOLD = 0.06;
 const ACTIVE_FRAME_MOTION_THRESHOLD = 0.015;
@@ -309,6 +315,70 @@ function getClosestFrame(targetTimestampMs: number, frames: PoseFrame[]) {
   return closestFrame;
 }
 
+function buildMotionSeries(frames: PoseFrame[]) {
+  const points: Array<{ timestampMs: number; motion: number }> = [];
+  for (let i = 1; i < frames.length; i += 1) {
+    const prev = frames[i - 1];
+    const cur = frames[i];
+    if (!prev || !cur) {
+      continue;
+    }
+    points.push({
+      timestampMs: cur.timestampMs,
+      motion: getLandmarkMotion(prev.landmarks, cur.landmarks),
+    });
+  }
+  return points;
+}
+
+function getClosestMotion(targetTimestampMs: number, series: Array<{ timestampMs: number; motion: number }>) {
+  let best: { timestampMs: number; motion: number } | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const point of series) {
+    const distance = Math.abs(point.timestampMs - targetTimestampMs);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = point;
+    }
+  }
+  if (!best || bestDistance > MATCH_TOLERANCE_MS) {
+    return null;
+  }
+  return best.motion;
+}
+
+function getMotionEnergyOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[]) {
+  const refSeries = buildMotionSeries(referenceFrames);
+  const subSeries = buildMotionSeries(submissionFrames);
+  if (refSeries.length === 0 || subSeries.length === 0) {
+    return 0;
+  }
+
+  let bestOffset = 0;
+  let bestCost = Number.POSITIVE_INFINITY;
+  for (let offsetMs = -3000; offsetMs <= 3000; offsetMs += 100) {
+    let totalCost = 0;
+    let count = 0;
+    for (const refPoint of refSeries) {
+      const subMotion = getClosestMotion(refPoint.timestampMs + offsetMs, subSeries);
+      if (subMotion === null) {
+        continue;
+      }
+      totalCost += Math.abs(refPoint.motion - subMotion);
+      count += 1;
+    }
+    if (count < 4) {
+      continue;
+    }
+    const avgCost = totalCost / count;
+    if (avgCost < bestCost) {
+      bestCost = avgCost;
+      bestOffset = offsetMs;
+    }
+  }
+  return bestOffset;
+}
+
 function evaluateOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[], offsetMs: number) {
   let alignedFrameCount = 0;
   let weightedDeltaSum = 0;
@@ -361,14 +431,28 @@ function evaluateOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFram
   };
 }
 
-function getBestAlignmentOffset(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[]) {
+function getBestAlignmentOffset(
+  referenceFrames: PoseFrame[],
+  submissionFrames: PoseFrame[],
+  preferredOffsetMs?: number,
+) {
+  const energyOffset = getMotionEnergyOffset(referenceFrames, submissionFrames);
+  const energyCandidates = Array.from({ length: 25 }, (_, index) => energyOffset - 1200 + index * 100);
+  const preferredCandidates =
+    typeof preferredOffsetMs === "number" && Number.isFinite(preferredOffsetMs)
+      ? Array.from({ length: 41 }, (_, index) => Math.round(preferredOffsetMs - 2000 + index * 100))
+      : [];
+  const candidateOffsets = Array.from(
+    new Set([...COARSE_OFFSET_CANDIDATES_MS, ...energyCandidates, ...preferredCandidates]),
+  ).sort((a, b) => a - b);
+
   let bestCandidate = {
     offsetMs: 0,
     alignedFrameCount: 0,
     averageDelta: Number.POSITIVE_INFINITY,
   };
 
-  for (const offsetMs of COARSE_OFFSET_CANDIDATES_MS) {
+  for (const offsetMs of candidateOffsets) {
     const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
 
     if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
@@ -448,10 +532,15 @@ function comparePoseFramesCore(
   referenceFrames: PoseFrame[],
   submissionFrames: PoseFrame[],
   mirrorMode: "original" | "mirrored",
+  options?: CompareOptions,
 ): PoseComparisonResult {
   const normalizedReference = normalizeFramesFromDanceStart(referenceFrames).frames;
   const normalizedSubmission = normalizeFramesFromDanceStart(submissionFrames).frames;
-  const alignment = getBestAlignmentOffset(normalizedReference, normalizedSubmission);
+  const alignment = getBestAlignmentOffset(
+    normalizedReference,
+    normalizedSubmission,
+    options?.preferredOffsetMs,
+  );
   const issues: PoseIssue[] = [];
   let weightedDeltaSum = 0;
   let weightedJointCount = 0;
@@ -533,6 +622,33 @@ function comparePoseFramesCore(
     roundToTwoDecimals(100 - deltaPenalty - issuePenalty - coveragePenalty),
   );
 
+  const shiftedReference = normalizedReference.map((frame) => ({
+    ...frame,
+    timestampMs: frame.timestampMs,
+  }));
+  const shiftedSubmission = normalizedSubmission.map((frame) => ({
+    ...frame,
+    timestampMs: frame.timestampMs - alignment.offsetMs,
+  }));
+  const minRefTs = shiftedReference.length > 0 ? shiftedReference[0]?.timestampMs ?? 0 : 0;
+  const minSubTs =
+    shiftedSubmission.length > 0
+      ? shiftedSubmission.reduce((min, frame) => Math.min(min, frame.timestampMs), Number.POSITIVE_INFINITY)
+      : 0;
+  const minTimestamp = Math.min(minRefTs, minSubTs);
+  const normalizationShift = minTimestamp < 0 ? Math.abs(minTimestamp) : 0;
+
+  const alignedReferenceFrames = shiftedReference.map((frame) => ({
+    ...frame,
+    timestampMs: Math.max(0, Math.round(frame.timestampMs + normalizationShift)),
+  }));
+  const alignedSubmissionFrames = shiftedSubmission
+    .map((frame) => ({
+      ...frame,
+      timestampMs: Math.round(frame.timestampMs + normalizationShift),
+    }))
+    .filter((frame) => frame.timestampMs >= 0);
+
   return {
     issues,
     overallScore,
@@ -540,19 +656,28 @@ function comparePoseFramesCore(
     alignedFrameCount: alignment.alignedFrameCount,
     averageDelta,
     mirrorMode,
+    alignedReferenceFrames,
+    alignedSubmissionFrames,
   };
 }
 
 export function comparePoseFrames(
   referenceFrames: PoseFrame[],
   submissionFrames: PoseFrame[],
+  options?: CompareOptions,
 ): PoseComparisonResult {
-  const original = comparePoseFramesCore(referenceFrames, submissionFrames, "original");
-  const mirrored = comparePoseFramesCore(referenceFrames, mirrorSubmissionFrames(submissionFrames), "mirrored");
+  const original = comparePoseFramesCore(referenceFrames, submissionFrames, "original", options);
+  const mirrored = comparePoseFramesCore(
+    referenceFrames,
+    mirrorSubmissionFrames(submissionFrames),
+    "mirrored",
+    options,
+  );
   const mirroredSwap = comparePoseFramesCore(
     referenceFrames,
     mirrorAndSwapSubmissionFrames(submissionFrames),
     "mirrored",
+    options,
   );
   const mirroredBest =
     mirroredSwap.overallScore > mirrored.overallScore || mirroredSwap.issues.length < mirrored.issues.length
