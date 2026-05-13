@@ -12,7 +12,7 @@ import {
 import { comparePoseFrames, type PoseFrame } from "@/lib/pose";
 import { isYouTubeUrl } from "@/lib/youtube";
 
-const SAMPLE_INTERVAL_MS = 250;
+const SAMPLE_INTERVAL_MS = 500;
 const WASM_ROOT = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm";
 const MODEL_ASSET_PATH =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
@@ -180,6 +180,7 @@ async function estimateAudioOffsetMs(referenceUrl: string, submissionUrl: string
 
     let bestLag = 0;
     let bestCost = Number.POSITIVE_INFINITY;
+    let secondBestCost = Number.POSITIVE_INFINITY;
 
     for (let lag = -maxLagWindows; lag <= maxLagWindows; lag += 1) {
       let total = 0;
@@ -197,13 +198,29 @@ async function estimateAudioOffsetMs(referenceUrl: string, submissionUrl: string
       }
       const avg = total / count;
       if (avg < bestCost) {
+        secondBestCost = bestCost;
         bestCost = avg;
         bestLag = lag;
+      } else if (avg < secondBestCost) {
+        secondBestCost = avg;
       }
     }
 
+    if (!Number.isFinite(bestCost)) {
+      return null;
+    }
+
+    const separation =
+      Number.isFinite(secondBestCost) && secondBestCost > 0
+        ? Math.max(0, Math.min(1, (secondBestCost - bestCost) / secondBestCost))
+        : 0;
+    const confidence = Math.round((0.35 + separation * 0.65) * 100) / 100;
+
     // Positive means submission is later than reference.
-    return -bestLag * 50;
+    return {
+      offsetMs: -bestLag * 50,
+      confidence,
+    };
   } catch {
     return null;
   } finally {
@@ -321,18 +338,21 @@ export function PoseAnalysisPanel({
         Math.max(0, Math.floor(referenceResource.video.duration * 1000)) + SAMPLE_INTERVAL_MS,
       );
 
-      const audioOffsetMs = await estimateAudioOffsetMs(referenceVideoUrl, submissionVideoUrl);
+      const audioAlignment = await estimateAudioOffsetMs(referenceVideoUrl, submissionVideoUrl);
       const comparison = comparePoseFrames(referenceResult.frames, submissionResult.frames, {
-        preferredOffsetMs: audioOffsetMs ?? undefined,
+        preferredOffsetMs: audioAlignment?.offsetMs,
+        preferredOffsetConfidence: audioAlignment?.confidence,
       });
       const mirrorNote =
         comparison.mirrorMode === "mirrored"
           ? " Mirror orientation was detected and auto-corrected during alignment."
           : "";
       const audioNote =
-        audioOffsetMs === null
+        audioAlignment === null
           ? ""
-          : ` Audio correlation suggested ${formatOffsetMs(audioOffsetMs)}.`;
+          : ` Audio correlation suggested ${formatOffsetMs(audioAlignment.offsetMs)} (confidence ${Math.round(
+              audioAlignment.confidence * 100,
+            )}%).`;
       const nextSummary =
         comparison.issues.length === 0
           ? `MirrorMe aligned the clips with ${formatOffsetMs(comparison.alignmentOffsetMs)} and did not flag any critical joint-angle mismatches in ${comparison.alignedFrameCount} sampled frames.${mirrorNote}${audioNote}`
@@ -403,7 +423,7 @@ export function PoseAnalysisPanel({
             Run the first MediaPipe comparison pass
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            This samples the full duration of both videos at 0.25-second intervals, computes
+            This samples the full duration of both videos at 0.5-second intervals, computes
             weighted joint-angle differences, stores frames and issues, and updates the analysis record.
           </p>
         </div>
@@ -431,7 +451,7 @@ export function PoseAnalysisPanel({
         </div>
         <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sampling window</p>
-          <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 0.25s</p>
+          <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 0.5s</p>
         </div>
       </div>
 

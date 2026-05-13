@@ -44,10 +44,12 @@ export type PoseComparisonResult = {
   mirrorMode: "original" | "mirrored";
   alignedReferenceFrames: PoseFrame[];
   alignedSubmissionFrames: PoseFrame[];
+  syncConfidence: number;
 };
 
 type CompareOptions = {
   preferredOffsetMs?: number;
+  preferredOffsetConfidence?: number;
 };
 
 const JOINT_DEFINITIONS = [
@@ -115,6 +117,7 @@ const VERY_MAJOR_THRESHOLD = 60;
 const ACTIVITY_START_THRESHOLD = 0.06;
 const ACTIVE_FRAME_MOTION_THRESHOLD = 0.015;
 const START_STREAK_FRAMES = 2;
+const DTW_RADIUS = 12;
 
 function toDegrees(radians: number) {
   return (radians * 180) / Math.PI;
@@ -315,6 +318,135 @@ function getClosestFrame(targetTimestampMs: number, frames: PoseFrame[]) {
   return closestFrame;
 }
 
+function median(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1]! + sorted[middle]!) / 2
+    : (sorted[middle] ?? 0);
+}
+
+function buildPoseEmbedding(frame: PoseFrame) {
+  const leftHip = frame.landmarks[POSE_LANDMARK_NAMES.leftHip];
+  const rightHip = frame.landmarks[POSE_LANDMARK_NAMES.rightHip];
+  const leftShoulder = frame.landmarks[POSE_LANDMARK_NAMES.leftShoulder];
+  const rightShoulder = frame.landmarks[POSE_LANDMARK_NAMES.rightShoulder];
+
+  if (!leftHip || !rightHip || !leftShoulder || !rightShoulder) {
+    return null;
+  }
+
+  const centerX = (leftHip.x + rightHip.x) / 2;
+  const centerY = (leftHip.y + rightHip.y) / 2;
+  const scale = Math.max(0.05, Math.hypot(leftShoulder.x - rightShoulder.x, leftShoulder.y - rightShoulder.y));
+
+  const tracked = [
+    POSE_LANDMARK_NAMES.leftShoulder,
+    POSE_LANDMARK_NAMES.rightShoulder,
+    POSE_LANDMARK_NAMES.leftElbow,
+    POSE_LANDMARK_NAMES.rightElbow,
+    POSE_LANDMARK_NAMES.leftWrist,
+    POSE_LANDMARK_NAMES.rightWrist,
+    POSE_LANDMARK_NAMES.leftKnee,
+    POSE_LANDMARK_NAMES.rightKnee,
+    POSE_LANDMARK_NAMES.leftAnkle,
+    POSE_LANDMARK_NAMES.rightAnkle,
+  ];
+
+  const embedding: number[] = [];
+  for (const index of tracked) {
+    const point = frame.landmarks[index];
+    if (!point || !isVisible(point)) {
+      embedding.push(0, 0);
+      continue;
+    }
+    embedding.push((point.x - centerX) / scale, (point.y - centerY) / scale);
+  }
+  return embedding;
+}
+
+function euclideanDistance(a: number[], b: number[]) {
+  let sum = 0;
+  const length = Math.min(a.length, b.length);
+  for (let i = 0; i < length; i += 1) {
+    const delta = (a[i] ?? 0) - (b[i] ?? 0);
+    sum += delta * delta;
+  }
+  return Math.sqrt(sum);
+}
+
+function getDtwAlignment(referenceFrames: PoseFrame[], submissionFrames: PoseFrame[]) {
+  const ref = referenceFrames
+    .map((frame) => ({ frame, embedding: buildPoseEmbedding(frame) }))
+    .filter((row): row is { frame: PoseFrame; embedding: number[] } => row.embedding !== null);
+  const sub = submissionFrames
+    .map((frame) => ({ frame, embedding: buildPoseEmbedding(frame) }))
+    .filter((row): row is { frame: PoseFrame; embedding: number[] } => row.embedding !== null);
+
+  if (ref.length < 6 || sub.length < 6) {
+    return { offsetMs: 0, confidence: 0 };
+  }
+
+  const n = ref.length;
+  const m = sub.length;
+  const dp = Array.from({ length: n + 1 }, () => Array.from({ length: m + 1 }, () => Number.POSITIVE_INFINITY));
+  const backtrack: Array<Array<[number, number] | null>> = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: m + 1 }, () => null),
+  );
+  dp[0]![0] = 0;
+
+  for (let i = 1; i <= n; i += 1) {
+    const minJ = Math.max(1, i - DTW_RADIUS);
+    const maxJ = Math.min(m, i + DTW_RADIUS);
+    for (let j = minJ; j <= maxJ; j += 1) {
+      const cost = euclideanDistance(ref[i - 1]!.embedding, sub[j - 1]!.embedding);
+      const candidates: Array<{ value: number; prev: [number, number] }> = [
+        { value: dp[i - 1]![j]!, prev: [i - 1, j] },
+        { value: dp[i]![j - 1]!, prev: [i, j - 1] },
+        { value: dp[i - 1]![j - 1]!, prev: [i - 1, j - 1] },
+      ];
+      const best = candidates.reduce((acc, cur) => (cur.value < acc.value ? cur : acc));
+      dp[i]![j] = cost + best.value;
+      backtrack[i]![j] = best.prev;
+    }
+  }
+
+  if (!Number.isFinite(dp[n]![m]!)) {
+    return { offsetMs: 0, confidence: 0 };
+  }
+
+  const lags: number[] = [];
+  let i = n;
+  let j = m;
+  let steps = 0;
+  while (i > 0 && j > 0 && steps < n + m) {
+    const refTs = ref[i - 1]!.frame.timestampMs;
+    const subTs = sub[j - 1]!.frame.timestampMs;
+    lags.push(subTs - refTs);
+    const prev = backtrack[i]![j];
+    if (!prev) {
+      break;
+    }
+    i = prev[0];
+    j = prev[1];
+    steps += 1;
+  }
+
+  const offsetMs = Math.round(median(lags));
+  const normalizedCost = dp[n]![m]! / Math.max(1, steps);
+  const lagSpread =
+    lags.length <= 1
+      ? 0
+      : Math.sqrt(lags.reduce((sum, lag) => sum + (lag - offsetMs) ** 2, 0) / lags.length);
+  const costConfidence = Math.max(0, Math.min(1, 1 - normalizedCost / 1.8));
+  const spreadConfidence = Math.max(0, Math.min(1, 1 - lagSpread / 1800));
+  const confidence = Math.round(((costConfidence * 0.7 + spreadConfidence * 0.3) * 100)) / 100;
+  return { offsetMs, confidence };
+}
+
 function buildMotionSeries(frames: PoseFrame[]) {
   const points: Array<{ timestampMs: number; motion: number }> = [];
   for (let i = 1; i < frames.length; i += 1) {
@@ -435,36 +567,58 @@ function getBestAlignmentOffset(
   referenceFrames: PoseFrame[],
   submissionFrames: PoseFrame[],
   preferredOffsetMs?: number,
+  preferredOffsetConfidence?: number,
 ) {
   const energyOffset = getMotionEnergyOffset(referenceFrames, submissionFrames);
+  const dtwAlignment = getDtwAlignment(referenceFrames, submissionFrames);
   const energyCandidates = Array.from({ length: 25 }, (_, index) => energyOffset - 1200 + index * 100);
+  const dtwCandidates = Array.from({ length: 31 }, (_, index) => dtwAlignment.offsetMs - 1500 + index * 100);
   const preferredCandidates =
     typeof preferredOffsetMs === "number" && Number.isFinite(preferredOffsetMs)
       ? Array.from({ length: 41 }, (_, index) => Math.round(preferredOffsetMs - 2000 + index * 100))
       : [];
   const candidateOffsets = Array.from(
-    new Set([...COARSE_OFFSET_CANDIDATES_MS, ...energyCandidates, ...preferredCandidates]),
+    new Set([...COARSE_OFFSET_CANDIDATES_MS, ...energyCandidates, ...dtwCandidates, ...preferredCandidates]),
+  ).sort((a, b) => a - b);
+  const audioConfidence = Math.max(0, Math.min(1, preferredOffsetConfidence ?? 0));
+  const dtwConfidence = Math.max(0, Math.min(1, dtwAlignment.confidence));
+  const anchorTotalWeight = 1 + dtwConfidence + audioConfidence;
+  const blendedAnchorMs = Math.round(
+    (energyOffset + dtwAlignment.offsetMs * dtwConfidence + (preferredOffsetMs ?? 0) * audioConfidence)
+      / anchorTotalWeight,
+  );
+  const blendedCandidates = Array.from({ length: 31 }, (_, index) => blendedAnchorMs - 1500 + index * 100);
+  const weightedCandidates = Array.from(
+    new Set([...candidateOffsets, ...blendedCandidates]),
   ).sort((a, b) => a - b);
 
   let bestCandidate = {
     offsetMs: 0,
     alignedFrameCount: 0,
     averageDelta: Number.POSITIVE_INFINITY,
+    tieBreakCost: Number.POSITIVE_INFINITY,
   };
 
-  for (const offsetMs of candidateOffsets) {
+  for (const offsetMs of weightedCandidates) {
     const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
+    const audioPenalty =
+      typeof preferredOffsetMs === "number"
+        ? Math.abs(offsetMs - preferredOffsetMs) * audioConfidence * 0.025
+        : 0;
+    const dtwPenalty = Math.abs(offsetMs - dtwAlignment.offsetMs) * dtwConfidence * 0.018;
+    const energyPenalty = Math.abs(offsetMs - energyOffset) * 0.01;
+    const tieBreakCost = candidate.averageDelta + audioPenalty + dtwPenalty + energyPenalty;
 
     if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
-      bestCandidate = candidate;
+      bestCandidate = { ...candidate, tieBreakCost };
       continue;
     }
 
     if (
       candidate.alignedFrameCount === bestCandidate.alignedFrameCount &&
-      candidate.averageDelta < bestCandidate.averageDelta
+      tieBreakCost < bestCandidate.tieBreakCost
     ) {
-      bestCandidate = candidate;
+      bestCandidate = { ...candidate, tieBreakCost };
     }
   }
 
@@ -472,19 +626,29 @@ function getBestAlignmentOffset(
   const fineEnd = bestCandidate.offsetMs + FINE_OFFSET_WINDOW_MS;
   for (let offsetMs = fineStart; offsetMs <= fineEnd; offsetMs += FINE_OFFSET_STEP_MS) {
     const candidate = evaluateOffset(referenceFrames, submissionFrames, offsetMs);
+    const audioPenalty =
+      typeof preferredOffsetMs === "number"
+        ? Math.abs(offsetMs - preferredOffsetMs) * audioConfidence * 0.025
+        : 0;
+    const dtwPenalty = Math.abs(offsetMs - dtwAlignment.offsetMs) * dtwConfidence * 0.018;
+    const energyPenalty = Math.abs(offsetMs - energyOffset) * 0.01;
+    const tieBreakCost = candidate.averageDelta + audioPenalty + dtwPenalty + energyPenalty;
     if (candidate.alignedFrameCount > bestCandidate.alignedFrameCount) {
-      bestCandidate = candidate;
+      bestCandidate = { ...candidate, tieBreakCost };
       continue;
     }
     if (
       candidate.alignedFrameCount === bestCandidate.alignedFrameCount
-      && candidate.averageDelta < bestCandidate.averageDelta
+      && tieBreakCost < bestCandidate.tieBreakCost
     ) {
-      bestCandidate = candidate;
+      bestCandidate = { ...candidate, tieBreakCost };
     }
   }
 
-  return bestCandidate;
+  return {
+    ...bestCandidate,
+    dtwConfidence,
+  };
 }
 
 function mirrorSubmissionFrames(frames: PoseFrame[]) {
@@ -540,6 +704,7 @@ function comparePoseFramesCore(
     normalizedReference,
     normalizedSubmission,
     options?.preferredOffsetMs,
+    options?.preferredOffsetConfidence,
   );
   const issues: PoseIssue[] = [];
   let weightedDeltaSum = 0;
@@ -658,6 +823,7 @@ function comparePoseFramesCore(
     mirrorMode,
     alignedReferenceFrames,
     alignedSubmissionFrames,
+    syncConfidence: alignment.dtwConfidence,
   };
 }
 
