@@ -127,35 +127,81 @@ function roundToTwoDecimals(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function roundToNearestFive(value: number) {
-  return Math.round(value / 5) * 5;
+function getPoint(landmarks: PosePoint[], index: number) {
+  return landmarks[index];
 }
 
-function humanJointName(jointName: string) {
-  switch (jointName) {
-    case "left_elbow":
-      return "left arm";
-    case "right_elbow":
-      return "right arm";
-    case "left_shoulder":
-      return "left shoulder";
-    case "right_shoulder":
-      return "right shoulder";
-    case "left_knee":
-      return "left leg";
-    case "right_knee":
-      return "right leg";
-    default:
-      return jointName.replaceAll("_", " ");
+function getVerticalState(deltaY: number, upThreshold: number, downThreshold: number) {
+  if (deltaY <= upThreshold) {
+    return "up";
   }
+  if (deltaY >= downThreshold) {
+    return "down";
+  }
+  return "mid";
 }
 
-function buildCoachingNote(jointName: string, expectedAngle: number, actualAngle: number) {
-  const expectedRounded = roundToNearestFive(expectedAngle);
-  const actualRounded = roundToNearestFive(actualAngle);
-  const direction =
-    actualRounded > expectedRounded ? "more open" : "more bent";
-  return `Your ${humanJointName(jointName)} is around ${actualRounded}\u00b0, while the reference is closer to ${expectedRounded}\u00b0. Try making it ${direction} to match the target shape.`;
+function buildCoachingNote(jointName: string, referenceLandmarks: PosePoint[], submissionLandmarks: PosePoint[]) {
+  const lShoulder = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.leftShoulder);
+  const rShoulder = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.rightShoulder);
+  const lWrist = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.leftWrist);
+  const rWrist = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.rightWrist);
+  const lHip = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.leftHip);
+  const rHip = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.rightHip);
+  const lAnkle = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.leftAnkle);
+  const rAnkle = getPoint(referenceLandmarks, POSE_LANDMARK_NAMES.rightAnkle);
+
+  const slShoulder = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.leftShoulder);
+  const srShoulder = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.rightShoulder);
+  const slWrist = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.leftWrist);
+  const srWrist = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.rightWrist);
+  const slHip = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.leftHip);
+  const srHip = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.rightHip);
+  const slAnkle = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.leftAnkle);
+  const srAnkle = getPoint(submissionLandmarks, POSE_LANDMARK_NAMES.rightAnkle);
+
+  const hasArmPoints = [lShoulder, rShoulder, lWrist, rWrist, slShoulder, srShoulder, slWrist, srWrist].every(isVisible);
+  const hasLegPoints = [lHip, rHip, lAnkle, rAnkle, slHip, srHip, slAnkle, srAnkle].every(isVisible);
+
+  if (hasArmPoints && (jointName.includes("elbow") || jointName.includes("shoulder"))) {
+    const refShoulderY = ((lShoulder?.y ?? 0) + (rShoulder?.y ?? 0)) / 2;
+    const subShoulderY = ((slShoulder?.y ?? 0) + (srShoulder?.y ?? 0)) / 2;
+    const refLeftArm = getVerticalState((lWrist?.y ?? 0) - refShoulderY, -0.08, 0.08);
+    const refRightArm = getVerticalState((rWrist?.y ?? 0) - refShoulderY, -0.08, 0.08);
+    const subLeftArm = getVerticalState((slWrist?.y ?? 0) - subShoulderY, -0.08, 0.08);
+    const subRightArm = getVerticalState((srWrist?.y ?? 0) - subShoulderY, -0.08, 0.08);
+
+    if (refLeftArm !== subLeftArm || refRightArm !== subRightArm) {
+      return `Arm position mismatch: reference has left arm ${refLeftArm} and right arm ${refRightArm}, but your clip shows left arm ${subLeftArm} and right arm ${subRightArm}. Match arm heights first.`;
+    }
+
+    const refArmSpread = Math.abs((lWrist?.x ?? 0) - (rWrist?.x ?? 0));
+    const subArmSpread = Math.abs((slWrist?.x ?? 0) - (srWrist?.x ?? 0));
+    if (Math.abs(refArmSpread - subArmSpread) > 0.12) {
+      return refArmSpread > subArmSpread
+        ? "Your arms are too close together compared with the reference. Open your arm shape wider."
+        : "Your arms are wider than the reference. Tighten the arm shape to match the choreography.";
+    }
+
+    return "Arm choice/shape differs from the reference at this moment. Focus on matching which arm leads and the arm height level.";
+  }
+
+  if (hasLegPoints && jointName.includes("knee")) {
+    const refHipY = ((lHip?.y ?? 0) + (rHip?.y ?? 0)) / 2;
+    const subHipY = ((slHip?.y ?? 0) + (srHip?.y ?? 0)) / 2;
+    const refLeftLeg = getVerticalState((lAnkle?.y ?? 0) - refHipY, -0.12, 0.18);
+    const refRightLeg = getVerticalState((rAnkle?.y ?? 0) - refHipY, -0.12, 0.18);
+    const subLeftLeg = getVerticalState((slAnkle?.y ?? 0) - subHipY, -0.12, 0.18);
+    const subRightLeg = getVerticalState((srAnkle?.y ?? 0) - subHipY, -0.12, 0.18);
+
+    if (refLeftLeg !== subLeftLeg || refRightLeg !== subRightLeg) {
+      return `Leg position mismatch: reference has left leg ${refLeftLeg} and right leg ${refRightLeg}, but your clip shows left leg ${subLeftLeg} and right leg ${subRightLeg}. Match which leg is lifted/grounded.`;
+    }
+
+    return "Leg action differs from the reference at this timestamp. Focus on matching which leg is driving the move and the height of the lift.";
+  }
+
+  return "Body positioning differs from the reference at this timestamp. Focus on matching which side leads (left/right) and whether limbs are up, mid, or down.";
 }
 
 function getAngle(first: PosePoint, middle: PosePoint, last: PosePoint) {
@@ -766,7 +812,11 @@ function comparePoseFramesCore(
         expectedAngle: roundToTwoDecimals(expectedAngle),
         actualAngle: roundToTwoDecimals(actualAngle),
         delta: roundToTwoDecimals(delta),
-        notes: buildCoachingNote(definition.jointName, expectedAngle, actualAngle),
+        notes: buildCoachingNote(
+          definition.jointName,
+          referenceFrame.landmarks,
+          submissionFrame.landmarks,
+        ),
       });
     }
   }

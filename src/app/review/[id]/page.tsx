@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { FullPlaybackComparison } from "@/components/full-playback-comparison";
 import { IssueSideBySide } from "@/components/issue-side-by-side";
 import { PoseAnalysisPanel } from "@/components/pose-analysis-panel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -232,7 +233,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
           referenceVideoUrl={reference?.file_url ?? null}
           submissionVideoUrl={submission?.file_url ?? null}
           existingIssueCount={issues.length}
-          autoRun={autoRun}
+          autoRun={autoRun || analysis.status === "pending"}
         />
 
         <IssueSideBySide
@@ -244,6 +245,12 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
             severity: "major" as const,
             notes: issue.notes,
           }))}
+          referenceVideoUrl={reference?.file_url ?? null}
+          submissionVideoUrl={submission?.file_url ?? null}
+        />
+
+        <FullPlaybackComparison
+          analysisId={analysis.id}
           referenceVideoUrl={reference?.file_url ?? null}
           submissionVideoUrl={submission?.file_url ?? null}
         />
