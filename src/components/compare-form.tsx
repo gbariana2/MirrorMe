@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 
 type CompareResponse =
   | {
@@ -43,6 +44,7 @@ function getVideoDurationMs(file: File) {
 }
 
 export function CompareForm() {
+  const { userId } = useAuth();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [referenceTitle, setReferenceTitle] = useState("Reference choreography");
@@ -280,6 +282,7 @@ export function CompareForm() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            userId: userId ?? undefined,
             referenceVideoId: refFinalizePayload.videoId,
             submissionVideoId: subFinalizePayload.videoId,
           }),

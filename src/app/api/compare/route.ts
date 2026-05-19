@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 
+import { getRequiredUserId } from "@/lib/auth";
 import { assertNonEmptyString, HttpError } from "@/lib/team";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as {
+      userId?: string;
       referenceVideoId?: string;
       submissionVideoId?: string;
     };
+    await getRequiredUserId(payload.userId);
     const referenceVideoId = assertNonEmptyString(
       payload.referenceVideoId,
       "referenceVideoId",

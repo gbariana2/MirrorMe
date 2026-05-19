@@ -72,6 +72,20 @@ function getVideoDurationMs(file: File) {
   });
 }
 
+function getVideoDurationMsFromUrl(url: string) {
+  return new Promise<number | null>((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.crossOrigin = "anonymous";
+    video.src = url;
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? Math.max(0, Math.floor(video.duration * 1000)) : null;
+      resolve(duration);
+    };
+    video.onerror = () => resolve(null);
+  });
+}
+
 export default function CaptainPage() {
   const { userId } = useAuth();
   const [teams, setTeams] = useState<TeamRow[]>([]);
@@ -83,6 +97,8 @@ export default function CaptainPage() {
   const [isHealthLoading, setIsHealthLoading] = useState(false);
   const [isBootstrapRunning, setIsBootstrapRunning] = useState(false);
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null);
+  const [isBackfillRunning, setIsBackfillRunning] = useState(false);
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
   const [isAdminToolsOpen, setIsAdminToolsOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [seedCount, setSeedCount] = useState(8);
@@ -619,6 +635,57 @@ export default function CaptainPage() {
     }
   }
 
+  async function runDurationBackfill() {
+    if (!userId) {
+      setError("Authentication required to run duration backfill.");
+      return;
+    }
+    setIsBackfillRunning(true);
+    setBackfillMessage("Loading videos that are missing duration...");
+    setError(null);
+    try {
+      const listResponse = await fetch(`/api/videos/missing-durations?userId=${encodeURIComponent(userId)}`);
+      const listPayload = await readJsonSafe<{
+        videos?: Array<{ id: string; file_url: string | null; title: string | null }>;
+        error?: string;
+      }>(listResponse);
+      if (!listResponse.ok || !listPayload?.videos) {
+        setError(listPayload?.error ?? "Failed to load missing video durations.");
+        return;
+      }
+      const targets = listPayload.videos.filter(
+        (video): video is { id: string; file_url: string; title: string | null } =>
+          typeof video.file_url === "string" && video.file_url.length > 0,
+      );
+      if (targets.length === 0) {
+        setBackfillMessage("No legacy videos need duration backfill.");
+        return;
+      }
+
+      let updatedCount = 0;
+      for (const target of targets) {
+        setBackfillMessage(`Backfilling durations... ${updatedCount}/${targets.length}`);
+        const durationMs = await getVideoDurationMsFromUrl(target.file_url);
+        if (!durationMs || durationMs <= 0) {
+          continue;
+        }
+        const patchResponse = await fetch(`/api/videos/${target.id}/duration`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, durationMs }),
+        });
+        if (patchResponse.ok) {
+          updatedCount += 1;
+        }
+      }
+      setBackfillMessage(`Duration backfill complete. Updated ${updatedCount} of ${targets.length} videos.`);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to backfill video durations.");
+    } finally {
+      setIsBackfillRunning(false);
+    }
+  }
+
   return (
     <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
@@ -666,6 +733,16 @@ export default function CaptainPage() {
                   >
                     {isBootstrapRunning ? "Running setup..." : "Run setup fix"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void runDurationBackfill();
+                    }}
+                    disabled={isBackfillRunning}
+                    className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                  >
+                    {isBackfillRunning ? "Backfilling..." : "Backfill durations"}
+                  </button>
                 </div>
                 {[
                   { label: "Database", value: health.checks.database },
@@ -698,6 +775,7 @@ export default function CaptainPage() {
                   Last checked: {new Date(health.checkedAt).toLocaleString()}
                 </p>
                 {bootstrapMessage ? <p className="text-[11px] text-slate-300">{bootstrapMessage}</p> : null}
+                {backfillMessage ? <p className="text-[11px] text-slate-300">{backfillMessage}</p> : null}
               </div>
             ) : isAdminToolsOpen ? (
               <p className="mt-2 text-xs text-slate-400">No health data loaded yet.</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 type Landmark = {
   x: number;
@@ -218,6 +219,7 @@ export function IssueSideBySide({
   referenceVideoUrl,
   submissionVideoUrl,
 }: Props) {
+  const { userId } = useAuth();
   const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
   const [frameData, setFrameData] = useState<FramePayload | null>(null);
   const [frameError, setFrameError] = useState<string | null>(null);
@@ -267,7 +269,8 @@ export function IssueSideBySide({
     setIsFrameLoading(true);
 
     try {
-      const response = await fetch(`/api/analyses/${analysisId}/frame?timestampMs=${issue.timestampMs}`);
+      const userQuery = userId ? `&userId=${encodeURIComponent(userId)}` : "";
+      const response = await fetch(`/api/analyses/${analysisId}/frame?timestampMs=${issue.timestampMs}${userQuery}`);
       const payload = (await response.json()) as FramePayload | { error: string };
       if (!response.ok || "error" in payload) {
         throw new Error("error" in payload ? payload.error : "Failed to load frame data.");

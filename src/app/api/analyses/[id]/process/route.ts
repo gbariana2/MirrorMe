@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { parseProcessPayload } from "@/lib/analysis-payload";
 import { persistAnalysisResult } from "@/lib/analysis-persistence";
+import { getRequiredUserId } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -15,7 +16,9 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const payload = parseProcessPayload(await request.json());
+    const requestBody = (await request.json()) as { userId?: string } & Record<string, unknown>;
+    await getRequiredUserId(requestBody.userId);
+    const payload = parseProcessPayload(requestBody);
     const result = await persistAnalysisResult(supabase, id, payload);
 
     if (!result.ok) {

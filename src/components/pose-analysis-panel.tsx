@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import {
   DrawingUtils,
   FilesetResolver,
@@ -389,6 +390,7 @@ export function PoseAnalysisPanel({
   existingIssueCount,
   autoRun = false,
 }: PoseAnalysisPanelProps) {
+  const { userId } = useAuth();
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -488,6 +490,7 @@ export function PoseAnalysisPanel({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId: userId ?? undefined,
           referenceFrames: comparison.alignedReferenceFrames,
           submissionFrames: comparison.alignedSubmissionFrames,
           issues: comparison.issues,

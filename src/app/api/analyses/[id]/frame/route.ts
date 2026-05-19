@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getRequiredUserId } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -12,6 +13,7 @@ export async function GET(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
+    await getRequiredUserId(searchParams.get("userId") ?? undefined);
     const timestampMsRaw = Number(searchParams.get("timestampMs") ?? "0");
     const timestampMs = Number.isFinite(timestampMsRaw) ? Math.max(0, Math.floor(timestampMsRaw)) : 0;
 
