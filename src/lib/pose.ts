@@ -120,8 +120,8 @@ const COARSE_OFFSET_CANDIDATES_MS = Array.from({ length: 121 }, (_, index) => -1
 const FINE_OFFSET_STEP_MS = 25;
 const FINE_OFFSET_WINDOW_MS = 500;
 const MATCH_TOLERANCE_MS = 180;
-const VERY_MAJOR_THRESHOLD = 60;
-const MINOR_THRESHOLD = 40;
+const VERY_MAJOR_THRESHOLD = 75;
+const MINOR_THRESHOLD = 52;
 const ACTIVITY_START_THRESHOLD = 0.06;
 const ACTIVE_FRAME_MOTION_THRESHOLD = 0.015;
 const START_STREAK_FRAMES = 2;
@@ -863,12 +863,12 @@ function comparePoseFramesCore(
 
   const totalJointCapacity = Math.max(1, comparableJointSamples);
   const issueRate = issues.length / totalJointCapacity;
-  const issuePenalty = Math.min(24, issueRate * 160);
-  const deltaPenalty = averageDelta * 1.05;
+  const issuePenalty = Math.min(16, issueRate * 95);
+  const deltaPenalty = averageDelta * 0.75;
   const coveragePenalty =
     alignment.alignedFrameCount === 0
-      ? 35
-      : Math.max(0, normalizedReference.length - alignment.alignedFrameCount) * 0.75;
+      ? 24
+      : Math.max(0, normalizedReference.length - alignment.alignedFrameCount) * 0.45;
   const overallScore = Math.max(
     0,
     roundToTwoDecimals(100 - deltaPenalty - issuePenalty - coveragePenalty),
