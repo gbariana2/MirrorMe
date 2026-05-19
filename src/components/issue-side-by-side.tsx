@@ -13,7 +13,7 @@ type Issue = {
   id: string;
   timestampMs: number;
   jointName: string;
-  severity: "major";
+  severity: "major" | "minor";
   notes: string | null;
 };
 
@@ -360,12 +360,12 @@ export function IssueSideBySide({
 
   return (
     <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">Critical Flags</p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">Very major deviations</h2>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">Flagged Moments</p>
+      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">Major and minor deviations</h2>
 
       {issues.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-white/25 bg-[#161922] p-5 text-sm text-slate-300">
-          No critical mismatches were flagged.
+          No major or minor mismatches were flagged.
         </div>
       ) : (
         <div className="mt-5 space-y-3">
@@ -377,7 +377,7 @@ export function IssueSideBySide({
                   <div>
                     <p className="text-sm font-semibold text-white">{formatJointName(issue.jointName)}</p>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                      {formatTimestampMs(issue.timestampMs)}
+                      {formatTimestampMs(issue.timestampMs)} • {issue.severity}
                     </p>
                   </div>
                   <button

@@ -28,7 +28,7 @@ export type PoseFrame = {
 export type PoseIssue = {
   timestampMs: number;
   jointName: string;
-  severity: "major";
+  severity: "major" | "minor";
   expectedAngle: number;
   actualAngle: number;
   delta: number;
@@ -121,6 +121,7 @@ const FINE_OFFSET_STEP_MS = 25;
 const FINE_OFFSET_WINDOW_MS = 500;
 const MATCH_TOLERANCE_MS = 180;
 const VERY_MAJOR_THRESHOLD = 60;
+const MINOR_THRESHOLD = 40;
 const ACTIVITY_START_THRESHOLD = 0.06;
 const ACTIVE_FRAME_MOTION_THRESHOLD = 0.015;
 const START_STREAK_FRAMES = 2;
@@ -830,7 +831,7 @@ function comparePoseFramesCore(
       weightedDeltaSum += delta * definition.weight;
       comparableJointSamples += 1;
 
-      if (delta < VERY_MAJOR_THRESHOLD) {
+      if (delta < MINOR_THRESHOLD) {
         continue;
       }
 
@@ -840,10 +841,11 @@ function comparePoseFramesCore(
       }
       latestIssueByJoint.set(definition.jointName, referenceFrame.timestampMs);
 
+      const severity = delta >= VERY_MAJOR_THRESHOLD ? "major" : "minor";
       issues.push({
         timestampMs: referenceFrame.timestampMs,
         jointName: definition.jointName,
-        severity: "major",
+        severity,
         expectedAngle: roundToTwoDecimals(expectedAngle),
         actualAngle: roundToTwoDecimals(actualAngle),
         delta: roundToTwoDecimals(delta),

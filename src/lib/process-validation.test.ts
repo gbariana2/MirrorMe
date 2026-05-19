@@ -21,7 +21,7 @@ function makePayload() {
       {
         timestampMs: 0,
         jointName: "left_elbow",
-        severity: "major",
+        severity: "minor",
         expectedAngle: 12.3456,
         actualAngle: 25.6789,
         delta: 13.3333,
@@ -41,6 +41,7 @@ test("parseProcessPayload clamps and sanitizes expected fields", () => {
   assert.equal(parsed.referenceFrames[0]?.landmarks[0]?.x, 0.12346);
   assert.equal(parsed.referenceFrames[0]?.landmarks[0]?.visibility, 1);
   assert.equal(parsed.issues[0]?.expectedAngle, 12.35);
+  assert.equal(parsed.issues[0]?.severity, "minor");
 });
 
 test("parseProcessPayload rejects malformed payloads", () => {

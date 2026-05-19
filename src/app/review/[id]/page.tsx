@@ -73,6 +73,8 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
   const issues = [...(analysis.analysis_issues ?? [])].sort(
     (left, right) => left.timestamp_ms - right.timestamp_ms,
   );
+  const majorIssueCount = issues.filter((issue) => issue.severity === "major").length;
+  const minorIssueCount = issues.filter((issue) => issue.severity === "minor").length;
   const overallScore = typeof analysis.overall_score === "number" ? analysis.overall_score : null;
   const scoreTone =
     overallScore === null
@@ -94,6 +96,13 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
           : overallScore >= 50
             ? "Needs Work"
             : "Critical";
+  const createdAt = new Date(analysis.created_at);
+  const createdAtUtcDisplay = Number.isNaN(createdAt.getTime())
+    ? "Unknown"
+    : createdAt.toISOString().replace("T", " ").replace(".000Z", " UTC");
+  const completedAtUtcDisplay = analysis.completed_at
+    ? new Date(analysis.completed_at).toISOString().replace("T", " ").replace(".000Z", " UTC")
+    : null;
 
   function formatTimestampMs(timestampMs: number) {
     const totalSeconds = Math.max(0, Math.floor(timestampMs / 1000));
@@ -144,10 +153,10 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
             </div>
             <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Created
+                Created (UTC)
               </p>
               <p className="mt-2 text-sm font-medium text-slate-200">
-                {new Date(analysis.created_at).toLocaleString()}
+                {createdAtUtcDisplay}
               </p>
             </div>
           </div>
@@ -208,13 +217,23 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
               Processing State
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
-              Feedback report placeholder
+              Feedback Report
             </h2>
-            <p className="mt-4 text-sm leading-6 text-slate-300">
-              This page is already backed by real Supabase data. The next step is to
-              fill `analysis_frames` and `analysis_issues` from the pose extraction
-              pipeline instead of leaving the analysis pending.
-            </p>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Status</p>
+                <p className="mt-2 text-sm font-semibold text-white">{analysis.status}</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Completed (UTC)</p>
+                <p className="mt-2 text-sm font-semibold text-white">{completedAtUtcDisplay ?? "Not completed yet"}</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Issue count</p>
+                <p className="mt-2 text-sm font-semibold text-white">{issues.length}</p>
+                <p className="mt-1 text-xs text-slate-300">Major: {majorIssueCount} • Minor: {minorIssueCount}</p>
+              </div>
+            </div>
 
             {analysis.summary ? (
               <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm leading-6 text-slate-300">
@@ -242,7 +261,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
             id: issue.id,
             timestampMs: issue.timestamp_ms,
             jointName: issue.joint_name,
-            severity: "major" as const,
+            severity: issue.severity === "minor" ? "minor" : "major",
             notes: issue.notes,
           }))}
           referenceVideoUrl={reference?.file_url ?? null}

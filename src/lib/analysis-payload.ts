@@ -124,7 +124,7 @@ function assertValidIssues(issues: unknown): PoseIssue[] {
       throw new Error(`issues[${index}].jointName is invalid.`);
     }
 
-    if (severity !== "major") {
+    if (severity !== "major" && severity !== "minor") {
       throw new Error(`issues[${index}].severity is invalid.`);
     }
 
