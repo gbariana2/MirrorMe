@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { FullPlaybackComparison } from "@/components/full-playback-comparison";
 import { IssueSideBySide } from "@/components/issue-side-by-side";
 import { PoseAnalysisPanel } from "@/components/pose-analysis-panel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -139,7 +138,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
                 Overall score
               </p>
               <p className="mt-2 text-3xl font-semibold text-white">
-                <span className={scoreTone}>{overallScore ?? "--"}</span>
+                <span className={scoreTone}>{overallScore === null ? "--" : `${overallScore}/100`}</span>
               </p>
               <p className={`mt-2 text-xs font-semibold uppercase tracking-[0.14em] ${scoreTone}`}>
                 {scoreBand}
@@ -195,7 +194,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
                   </h3>
                   <p className="mt-3 text-sm text-slate-300">
                     Duration:{" "}
-                    {video?.duration_ms ? formatTimestampMs(video.duration_ms) : "Unknown"}
+                    {video?.duration_ms ? formatTimestampMs(video.duration_ms) : "Unavailable (legacy upload)"}
                   </p>
                   {video?.file_url ? (
                     <a
@@ -268,11 +267,6 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
           submissionVideoUrl={submission?.file_url ?? null}
         />
 
-        <FullPlaybackComparison
-          analysisId={analysis.id}
-          referenceVideoUrl={reference?.file_url ?? null}
-          submissionVideoUrl={submission?.file_url ?? null}
-        />
       </div>
     </main>
   );

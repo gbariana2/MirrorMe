@@ -27,6 +27,27 @@ type SubmissionResponse = {
   reviewPath: string;
 };
 
+function getVideoDurationMs(file: File) {
+  return new Promise<number | null>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.src = objectUrl;
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? Math.max(0, Math.floor(video.duration * 1000)) : null;
+      cleanup();
+      resolve(duration);
+    };
+    video.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+  });
+}
+
 function DancerDashboard() {
   const { userId } = useAuth();
   const searchParams = useSearchParams();
@@ -207,6 +228,7 @@ function DancerDashboard() {
     setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: null }));
     try {
       setError(null);
+      const submissionDurationMs = await getVideoDurationMs(submissionFile);
 
       const prepareResponse = await fetchWithTimeout(
         "/api/videos/upload-url",
@@ -235,8 +257,40 @@ function DancerDashboard() {
         return;
       }
 
+      let uploadPath = preparePayload.path;
+      let uploadUrl = preparePayload.signedUrl;
       setSubmitProgress((current) => ({ ...current, [assignmentId]: "Uploading submission..." }));
-      await uploadFileToSignedUrl(assignmentId, preparePayload.signedUrl, submissionFile);
+      try {
+        await uploadFileToSignedUrl(assignmentId, uploadUrl, submissionFile);
+      } catch {
+        setSubmitProgress((current) => ({ ...current, [assignmentId]: "Retrying submission upload..." }));
+        const retryPrepareResponse = await fetchWithTimeout(
+          "/api/videos/upload-url",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: userId ?? undefined,
+              kind: "submission",
+              filename: submissionFile.name,
+              mimeType: submissionFile.type,
+            }),
+          },
+          30000,
+        );
+        const retryPreparePayload = await readJsonSafe<{
+          path?: string;
+          signedUrl?: string;
+          error?: string;
+        }>(retryPrepareResponse);
+        if (!retryPrepareResponse.ok || !retryPreparePayload?.path || !retryPreparePayload.signedUrl) {
+          setError(retryPreparePayload?.error ?? "Failed to retry submission upload.");
+          return;
+        }
+        uploadPath = retryPreparePayload.path;
+        uploadUrl = retryPreparePayload.signedUrl;
+        await uploadFileToSignedUrl(assignmentId, uploadUrl, submissionFile);
+      }
       setUploadPercent((current) => ({ ...current, [assignmentId]: 100 }));
       setUploadEtaSeconds((current) => ({ ...current, [assignmentId]: null }));
 
@@ -250,8 +304,9 @@ function DancerDashboard() {
             userId: userId ?? undefined,
             kind: "submission",
             title: `Assignment ${assignmentId} submission`,
-            path: preparePayload.path,
+            path: uploadPath,
             mimeType: submissionFile.type,
+            durationMs: submissionDurationMs ?? undefined,
           }),
         },
         30000,

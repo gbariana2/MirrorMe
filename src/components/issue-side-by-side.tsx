@@ -223,16 +223,24 @@ export function IssueSideBySide({
   const [frameError, setFrameError] = useState<string | null>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [syncPlaying, setSyncPlaying] = useState(false);
+  const [severityFilter, setSeverityFilter] = useState<"all" | "major" | "minor">("all");
 
   const referenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const submissionCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const referenceVideoRef = useRef<HTMLVideoElement | null>(null);
   const submissionVideoRef = useRef<HTMLVideoElement | null>(null);
+  const submissionOverlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const expandedIssue = useMemo(
     () => issues.find((issue) => issue.id === expandedIssueId) ?? null,
     [expandedIssueId, issues],
   );
+  const filteredIssues = useMemo(() => {
+    if (severityFilter === "all") {
+      return issues;
+    }
+    return issues.filter((issue) => issue.severity === severityFilter);
+  }, [issues, severityFilter]);
 
   const badJointKeys = useMemo(() => {
     if (!frameData) {
@@ -358,18 +366,68 @@ export function IssueSideBySide({
     setSyncPlaying(true);
   }
 
+  useEffect(() => {
+    const submissionVideo = submissionVideoRef.current;
+    const overlayCanvas = submissionOverlayCanvasRef.current;
+    if (!submissionVideo || !overlayCanvas || !frameData) {
+      return;
+    }
+
+    const renderOverlay = () => {
+      const ctx = overlayCanvas.getContext("2d");
+      if (!ctx) {
+        return;
+      }
+      const width = Math.max(320, Math.floor(submissionVideo.clientWidth || submissionVideo.videoWidth || 640));
+      const height = Math.max(180, Math.floor(submissionVideo.clientHeight || submissionVideo.videoHeight || 360));
+      overlayCanvas.width = width;
+      overlayCanvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+      drawSkeleton(ctx, width, height, frameData.submissionLandmarks, redPointIndexes);
+    };
+
+    const onLoadedMetadata = () => renderOverlay();
+    const onSeeked = () => renderOverlay();
+    const onPlay = () => renderOverlay();
+    submissionVideo.addEventListener("loadedmetadata", onLoadedMetadata);
+    submissionVideo.addEventListener("seeked", onSeeked);
+    submissionVideo.addEventListener("play", onPlay);
+    renderOverlay();
+    return () => {
+      submissionVideo.removeEventListener("loadedmetadata", onLoadedMetadata);
+      submissionVideo.removeEventListener("seeked", onSeeked);
+      submissionVideo.removeEventListener("play", onPlay);
+    };
+  }, [frameData, redPointIndexes, expandedIssueId]);
+
   return (
     <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">Flagged Moments</p>
       <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">Major and minor deviations</h2>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {(["all", "major", "minor"] as const).map((filter) => (
+          <button
+            key={filter}
+            type="button"
+            onClick={() => setSeverityFilter(filter)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              severityFilter === filter
+                ? "bg-[#2fa8ff] text-slate-950"
+                : "border border-white/25 bg-transparent text-slate-300"
+            }`}
+          >
+            {filter === "all" ? "All" : filter === "major" ? "Major" : "Minor"}
+          </button>
+        ))}
+      </div>
 
-      {issues.length === 0 ? (
+      {filteredIssues.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-white/25 bg-[#161922] p-5 text-sm text-slate-300">
-          No major or minor mismatches were flagged.
+          No {severityFilter === "all" ? "major or minor" : severityFilter} mismatches were flagged.
         </div>
       ) : (
         <div className="mt-5 space-y-3">
-          {issues.map((issue) => {
+          {filteredIssues.map((issue) => {
             const isExpanded = expandedIssueId === issue.id;
             return (
               <article key={issue.id} className="rounded-2xl border border-white/15 bg-[#161922] p-4">
@@ -427,13 +485,19 @@ export function IssueSideBySide({
                         muted
                         className="w-full rounded-xl"
                       />
-                      <video
-                        ref={submissionVideoRef}
-                        src={submissionVideoUrl ?? undefined}
-                        controls
-                        muted
-                        className="w-full rounded-xl"
-                      />
+                      <div className="relative">
+                        <video
+                          ref={submissionVideoRef}
+                          src={submissionVideoUrl ?? undefined}
+                          controls
+                          muted
+                          className="w-full rounded-xl"
+                        />
+                        <canvas
+                          ref={submissionOverlayCanvasRef}
+                          className="pointer-events-none absolute inset-0 h-full w-full rounded-xl"
+                        />
+                      </div>
                     </div>
                   </div>
                 ) : null}

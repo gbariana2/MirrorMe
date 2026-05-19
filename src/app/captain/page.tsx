@@ -51,6 +51,27 @@ type BootstrapResponse = {
   error?: string;
 };
 
+function getVideoDurationMs(file: File) {
+  return new Promise<number | null>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.src = objectUrl;
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? Math.max(0, Math.floor(video.duration * 1000)) : null;
+      cleanup();
+      resolve(duration);
+    };
+    video.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+  });
+}
+
 export default function CaptainPage() {
   const { userId } = useAuth();
   const [teams, setTeams] = useState<TeamRow[]>([]);
@@ -359,6 +380,7 @@ export default function CaptainPage() {
           setError("Upload a reference video for this assignment.");
           return;
         }
+        const referenceDurationMs = await getVideoDurationMs(referenceFile);
 
         const uploadForm = new FormData();
         if (userId) {
@@ -409,7 +431,45 @@ export default function CaptainPage() {
           return;
         }
 
-        await uploadFileToSignedUrl(preparePayload.signedUrl, referenceFile);
+        let uploadPath = preparePayload.path;
+        let uploadUrl = preparePayload.signedUrl;
+        try {
+          await uploadFileToSignedUrl(uploadUrl, referenceFile);
+        } catch {
+          setAssignmentProgress("Retrying reference upload...");
+          const retryPrepareResponse = await fetchWithTimeout(
+            "/api/videos/upload-url",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: userId ?? undefined,
+                kind: "reference",
+                filename: referenceFile.name,
+                mimeType: referenceFile.type,
+              }),
+            },
+            30000,
+          );
+          const retryPreparePayload = await readJsonSafe<{
+            path?: string;
+            signedUrl?: string;
+            error?: string;
+          }>(retryPrepareResponse);
+          if (!retryPrepareResponse.ok || !retryPreparePayload?.path || !retryPreparePayload.signedUrl) {
+            setError(
+              formatHttpError(
+                retryPrepareResponse,
+                "Failed to retry reference upload.",
+                retryPreparePayload?.error,
+              ),
+            );
+            return;
+          }
+          uploadPath = retryPreparePayload.path;
+          uploadUrl = retryPreparePayload.signedUrl;
+          await uploadFileToSignedUrl(uploadUrl, referenceFile);
+        }
         setUploadEtaSeconds(null);
 
         const finalizeResponse = await fetchWithTimeout(
@@ -421,8 +481,9 @@ export default function CaptainPage() {
               userId: userId ?? undefined,
               kind: "reference",
               title: `${assignmentTitle} reference`,
-              path: preparePayload.path,
+              path: uploadPath,
               mimeType: referenceFile.type,
+              durationMs: referenceDurationMs ?? undefined,
             }),
           },
           30000,

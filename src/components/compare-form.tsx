@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 type CompareResponse =
   | {
@@ -22,8 +21,28 @@ function formatFileLabel(file: File | null) {
   return `${file.name} (${sizeInMb} MB)`;
 }
 
+function getVideoDurationMs(file: File) {
+  return new Promise<number | null>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.src = objectUrl;
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? Math.max(0, Math.floor(video.duration * 1000)) : null;
+      cleanup();
+      resolve(duration);
+    };
+    video.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+  });
+}
+
 export function CompareForm() {
-  const router = useRouter();
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [referenceTitle, setReferenceTitle] = useState("Reference choreography");
@@ -117,6 +136,10 @@ export function CompareForm() {
 
     startTransition(async () => {
       try {
+        const [referenceDurationMs, submissionDurationMs] = await Promise.all([
+          getVideoDurationMs(referenceFile),
+          getVideoDurationMs(submissionFile),
+        ]);
         setProgressLabel("Preparing reference upload...");
         const refPrepareResponse = await fetchWithTimeout("/api/videos/upload-url", {
           method: "POST",
@@ -135,8 +158,33 @@ export function CompareForm() {
           return;
         }
 
+        let refUploadPath = refPreparePayload.path;
+        let refUploadUrl = refPreparePayload.signedUrl;
         setProgressLabel("Uploading reference video...");
-        await uploadFileToSignedUrl(refPreparePayload.signedUrl, referenceFile, 0);
+        try {
+          await uploadFileToSignedUrl(refUploadUrl, referenceFile, 0);
+        } catch {
+          setProgressLabel("Retrying reference upload...");
+          const retryPrepareResponse = await fetchWithTimeout("/api/videos/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              kind: "reference",
+              filename: referenceFile.name,
+              mimeType: referenceFile.type,
+            }),
+          });
+          const retryPreparePayload = await readJsonSafe<{ path?: string; signedUrl?: string; error?: string }>(
+            retryPrepareResponse,
+          );
+          if (!retryPrepareResponse.ok || !retryPreparePayload?.path || !retryPreparePayload.signedUrl) {
+            setError(retryPreparePayload?.error ?? "Failed to retry reference upload.");
+            return;
+          }
+          refUploadPath = retryPreparePayload.path;
+          refUploadUrl = retryPreparePayload.signedUrl;
+          await uploadFileToSignedUrl(refUploadUrl, referenceFile, 0);
+        }
         setUploadPercent(50);
 
         setProgressLabel("Finalizing reference...");
@@ -147,8 +195,9 @@ export function CompareForm() {
           body: JSON.stringify({
             kind: "reference",
             title: referenceTitle,
-            path: refPreparePayload.path,
+            path: refUploadPath,
             mimeType: referenceFile.type,
+            durationMs: referenceDurationMs ?? undefined,
           }),
         });
         const refFinalizePayload = await readJsonSafe<{ videoId?: string; error?: string }>(refFinalizeResponse);
@@ -176,8 +225,33 @@ export function CompareForm() {
           return;
         }
 
+        let subUploadPath = subPreparePayload.path;
+        let subUploadUrl = subPreparePayload.signedUrl;
         setProgressLabel("Uploading dancer video...");
-        await uploadFileToSignedUrl(subPreparePayload.signedUrl, submissionFile, 50);
+        try {
+          await uploadFileToSignedUrl(subUploadUrl, submissionFile, 50);
+        } catch {
+          setProgressLabel("Retrying dancer upload...");
+          const retryPrepareResponse = await fetchWithTimeout("/api/videos/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              kind: "submission",
+              filename: submissionFile.name,
+              mimeType: submissionFile.type,
+            }),
+          });
+          const retryPreparePayload = await readJsonSafe<{ path?: string; signedUrl?: string; error?: string }>(
+            retryPrepareResponse,
+          );
+          if (!retryPrepareResponse.ok || !retryPreparePayload?.path || !retryPreparePayload.signedUrl) {
+            setError(retryPreparePayload?.error ?? "Failed to retry submission upload.");
+            return;
+          }
+          subUploadPath = retryPreparePayload.path;
+          subUploadUrl = retryPreparePayload.signedUrl;
+          await uploadFileToSignedUrl(subUploadUrl, submissionFile, 50);
+        }
         setUploadPercent(100);
         setUploadEtaSeconds(null);
 
@@ -189,8 +263,9 @@ export function CompareForm() {
           body: JSON.stringify({
             kind: "submission",
             title: submissionTitle,
-            path: subPreparePayload.path,
+            path: subUploadPath,
             mimeType: submissionFile.type,
+            durationMs: submissionDurationMs ?? undefined,
           }),
         });
         const subFinalizePayload = await readJsonSafe<{ videoId?: string; error?: string }>(subFinalizeResponse);
@@ -216,11 +291,15 @@ export function CompareForm() {
           return;
         }
 
-        setProgressLabel("Analysis created. Opening review...");
+        setProgressLabel("Analysis created. Opened review in a new tab.");
         setSuccess(data);
-        router.push(`${data.reviewPath}?autorun=1`);
+        window.open(`${data.reviewPath}?autorun=1`, "_blank", "noopener,noreferrer");
       } catch (caughtError) {
-        setError(caughtError instanceof Error ? caughtError.message : "Upload failed.");
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Upload failed. Please retry; if it persists, reduce file size or network contention.",
+        );
       }
     });
   }

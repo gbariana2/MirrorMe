@@ -11,6 +11,7 @@ type Payload = {
   title?: string;
   path: string;
   mimeType: string;
+  durationMs?: number;
 };
 
 function getTitle(value: unknown, fallback: string) {
@@ -40,6 +41,10 @@ export async function POST(request: Request) {
       payload.title,
       kind === "reference" ? "Reference choreography" : "Dancer submission",
     );
+    const durationMs =
+      typeof payload.durationMs === "number" && Number.isFinite(payload.durationMs)
+        ? Math.max(0, Math.floor(payload.durationMs))
+        : null;
 
     const supabase = createServerSupabaseClient();
     const { data: publicUrlData } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
@@ -52,6 +57,7 @@ export async function POST(request: Request) {
         file_path: path,
         file_url: publicUrlData.publicUrl,
         mime_type: mimeType,
+        duration_ms: durationMs,
       })
       .select("id, title, file_url")
       .single();

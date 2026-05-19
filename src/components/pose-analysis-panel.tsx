@@ -397,6 +397,16 @@ export function PoseAnalysisPanel({
   const [issueCount, setIssueCount] = useState(existingIssueCount);
   const [previews, setPreviews] = useState<Preview[]>([]);
   const [syncDiagnostics, setSyncDiagnostics] = useState<SyncDiagnostics>(null);
+  const scoreTone =
+    score === null
+      ? "text-slate-200"
+      : score >= 85
+        ? "text-emerald-300"
+        : score >= 70
+          ? "text-amber-300"
+          : score >= 50
+            ? "text-orange-300"
+            : "text-rose-300";
   const hasAutoTriggeredRef = useRef(false);
 
   const isConfigured = useMemo(() => {
@@ -565,8 +575,8 @@ export function PoseAnalysisPanel({
         </div>
         <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Latest score</p>
-          <p className="mt-2 text-3xl font-semibold text-white">
-            {score === null ? "--" : score}
+          <p className={`mt-2 text-3xl font-semibold ${scoreTone}`}>
+            {score === null ? "--" : `${score}/100`}
           </p>
         </div>
         <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
