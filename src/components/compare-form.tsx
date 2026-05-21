@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
+import { BrandMark } from "@/components/brand-mark";
 
 type CompareResponse =
   | {
@@ -311,16 +312,17 @@ export function CompareForm() {
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <form
         onSubmit={handleSubmit}
-        className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8"
+        className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8"
       >
         <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
+          <BrandMark className="mb-4" />
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
             Upload Pair
           </p>
-          <h1 className="mt-2 bg-gradient-to-r from-[#b8e4ff] via-[#7ecbff] to-[#37adff] bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
             Start a comparison run
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700">
             This first pass uploads both videos, stores them in Supabase, and creates
             a real analysis record you can build the pose-comparison pipeline on top of.
           </p>
@@ -328,45 +330,45 @@ export function CompareForm() {
 
         <div className="grid gap-5">
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-100">Reference title</span>
+            <span className="text-sm font-medium text-slate-900">Reference title</span>
             <input
               value={referenceTitle}
               onChange={(event) => setReferenceTitle(event.target.value)}
-              className="rounded-2xl border border-white/15 bg-[#101625] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[#5ab8ff]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#101625] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#5ab8ff]"
               placeholder="Reference choreography"
             />
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-100">Reference video</span>
+            <span className="text-sm font-medium text-slate-900">Reference video</span>
             <input
               type="file"
               accept="video/*"
               onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
               className="rounded-2xl border border-dashed border-white/30 bg-[#101625] px-4 py-3 text-sm text-slate-200"
             />
-            <span className="text-xs text-slate-400">{formatFileLabel(referenceFile)}</span>
+            <span className="text-xs text-slate-500">{formatFileLabel(referenceFile)}</span>
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-100">Submission title</span>
+            <span className="text-sm font-medium text-slate-900">Submission title</span>
             <input
               value={submissionTitle}
               onChange={(event) => setSubmissionTitle(event.target.value)}
-              className="rounded-2xl border border-white/15 bg-[#101625] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[#5ab8ff]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#101625] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#5ab8ff]"
               placeholder="Dancer submission"
             />
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-slate-100">Dancer video</span>
+            <span className="text-sm font-medium text-slate-900">Dancer video</span>
             <input
               type="file"
               accept="video/*"
               onChange={(event) => setSubmissionFile(event.target.files?.[0] ?? null)}
               className="rounded-2xl border border-dashed border-white/30 bg-[#101625] px-4 py-3 text-sm text-slate-200"
             />
-            <span className="text-xs text-slate-400">{formatFileLabel(submissionFile)}</span>
+            <span className="text-xs text-slate-500">{formatFileLabel(submissionFile)}</span>
           </label>
         </div>
 
@@ -377,17 +379,17 @@ export function CompareForm() {
         ) : null}
 
         {progressLabel ? (
-          <div className="mt-6 rounded-2xl border border-white/20 bg-white/5 px-4 py-3">
+          <div className="mt-6 rounded-2xl border border-[#decfbe] bg-white/5 px-4 py-3">
             <p className="text-sm text-slate-200">{progressLabel}</p>
             {uploadPercent !== null ? (
               <>
                 <div className="mt-2 h-2 w-full rounded-full bg-white/15">
                   <div
-                    className="h-full rounded-full bg-[#2fa8ff] transition-all"
+                    className="h-full rounded-full bg-[#ff7f5f] transition-all"
                     style={{ width: `${uploadPercent}%` }}
                   />
                 </div>
-                <p className="mt-2 text-xs text-slate-300">
+                <p className="mt-2 text-xs text-slate-700">
                   {uploadPercent}% complete
                   {progressLabel?.startsWith("Uploading") && uploadEtaSeconds !== null && uploadEtaSeconds > 0
                     ? ` · ~${uploadEtaSeconds}s remaining`
@@ -412,7 +414,7 @@ export function CompareForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-full bg-[#2fa8ff] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.35)] transition hover:bg-[#66c2ff] disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-[#ff7f5f] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.35)] transition hover:bg-[#ff997f] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isPending ? "Uploading..." : "Create analysis"}
           </button>
@@ -425,25 +427,25 @@ export function CompareForm() {
         </div>
       </form>
 
-      <aside className="rounded-[2rem] border border-white/15 soft-panel p-6 text-slate-100 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
+      <aside className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 text-slate-900 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
           Current Scope
         </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-white">
+        <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
           What this step proves
         </h2>
 
-        <ul className="mt-6 space-y-3 text-sm leading-6 text-slate-300">
+        <ul className="mt-6 space-y-3 text-sm leading-6 text-slate-700">
           <li>Both video assets can be stored in a durable bucket.</li>
           <li>A comparison job gets a stable database record and review URL.</li>
           <li>The project now has a real substrate for pose extraction and scoring.</li>
         </ul>
 
-        <div className="mt-8 rounded-2xl border border-white/15 bg-white/5 p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
+        <div className="mt-8 rounded-2xl border border-[#e8dccf] bg-white/5 p-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-700">
             Next after this
           </p>
-          <p className="mt-3 text-sm leading-6 text-slate-300">
+          <p className="mt-3 text-sm leading-6 text-slate-700">
             Add frame sampling and landmark extraction, then populate `analysis_frames`
             and `analysis_issues` instead of leaving the job in a pending state.
           </p>

@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { BrandMark } from "@/components/brand-mark";
 
 type TeamRow = {
   role: "captain" | "dancer";
@@ -687,20 +688,23 @@ export default function CaptainPage() {
   }
 
   return (
-    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
+    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-900 sm:px-10 lg:px-16">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
-        <section className="rounded-3xl border border-white/15 soft-panel p-6">
+        <section className="rounded-3xl border border-[#e8dccf] soft-panel p-6">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold text-white">Captain Dashboard</h1>
-            <Link href="/" className="text-sm font-semibold text-[#8fd4ff] underline">
+            <div className="flex items-center gap-3">
+              <BrandMark withWordmark={false} size={34} />
+              <h1 className="text-2xl font-bold text-slate-900">Captain Dashboard</h1>
+            </div>
+            <Link href="/" className="text-sm font-semibold text-[#d64f72] underline">
               Back to home
             </Link>
           </div>
-          <p className="mt-2 text-sm text-slate-300">Create teams and publish assignment deadlines.</p>
+          <p className="mt-2 text-sm text-slate-700">Create teams and publish assignment deadlines.</p>
 
-          <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
+          <div className="mt-4 rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Admin tools</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-700">Admin tools</p>
               <button
                 type="button"
                 onClick={() => setIsAdminToolsOpen((current) => !current)}
@@ -750,7 +754,7 @@ export default function CaptainPage() {
                   { label: "Worker secret", value: health.checks.analysisWorkerSecret },
                 ].map((check) => (
                   <div key={check.label} className="rounded-lg border border-white/10 bg-[#171c2f] px-3 py-2">
-                    <p className="text-xs font-semibold text-white">
+                    <p className="text-xs font-semibold text-slate-900">
                       {check.label}{" "}
                       <span
                         className={
@@ -768,17 +772,17 @@ export default function CaptainPage() {
                             : "Issue"}
                       </span>
                     </p>
-                    <p className="mt-1 text-[11px] text-slate-300">{check.value.detail}</p>
+                    <p className="mt-1 text-[11px] text-slate-700">{check.value.detail}</p>
                   </div>
                 ))}
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   Last checked: {new Date(health.checkedAt).toLocaleString()}
                 </p>
-                {bootstrapMessage ? <p className="text-[11px] text-slate-300">{bootstrapMessage}</p> : null}
-                {backfillMessage ? <p className="text-[11px] text-slate-300">{backfillMessage}</p> : null}
+                {bootstrapMessage ? <p className="text-[11px] text-slate-700">{bootstrapMessage}</p> : null}
+                {backfillMessage ? <p className="text-[11px] text-slate-700">{backfillMessage}</p> : null}
               </div>
             ) : isAdminToolsOpen ? (
-              <p className="mt-2 text-xs text-slate-400">No health data loaded yet.</p>
+              <p className="mt-2 text-xs text-slate-500">No health data loaded yet.</p>
             ) : null}
           </div>
 
@@ -787,11 +791,11 @@ export default function CaptainPage() {
               value={teamName}
               onChange={(event) => setTeamName(event.target.value)}
               placeholder="Team name"
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+              className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
             />
             <button
               type="submit"
-              className="rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950"
+              className="rounded-full bg-[#ff7f5f] px-4 py-2 text-sm font-bold text-slate-950"
             >
               Create Team
             </button>
@@ -802,13 +806,13 @@ export default function CaptainPage() {
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               placeholder="First name"
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-2 text-sm outline-none"
+              className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-2 text-sm outline-none"
             />
             <input
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
               placeholder="Last name"
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-2 text-sm outline-none"
+              className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-2 text-sm outline-none"
             />
             <button
               type="submit"
@@ -827,12 +831,12 @@ export default function CaptainPage() {
                 className={`rounded-xl border px-4 py-3 text-left ${
                   selectedTeamId === item.team.id
                     ? "border-[#8fd4ff] bg-[#1a2037]"
-                    : "border-white/15 bg-[#121527]"
+                    : "border-[#e8dccf] bg-[#fffaf5]"
                 }`}
               >
-                <p className="text-sm font-semibold text-white">{item.team.name}</p>
+                <p className="text-sm font-semibold text-slate-900">{item.team.name}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <p className="text-xs text-slate-300">Join code: {item.team.join_code}</p>
+                  <p className="text-xs text-slate-700">Join code: {item.team.join_code}</p>
                   <button
                     type="button"
                     onClick={(event) => {
@@ -858,9 +862,9 @@ export default function CaptainPage() {
             ))}
           </div>
 
-          <div className="mt-6 rounded-xl border border-white/15 bg-[#121527] p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Test data</p>
-            <p className="mt-1 text-xs text-slate-400">
+          <div className="mt-6 rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-700">Test data</p>
+            <p className="mt-1 text-xs text-slate-500">
               Add dummy dancers to the selected team for assignment testing.
             </p>
             <div className="mt-3 flex items-center gap-2">
@@ -870,7 +874,7 @@ export default function CaptainPage() {
                 max={30}
                 value={seedCount}
                 onChange={(event) => setSeedCount(Number(event.target.value))}
-                className="w-20 rounded-xl border border-white/20 bg-[#171c2f] px-3 py-2 text-xs outline-none"
+                className="w-20 rounded-xl border border-[#decfbe] bg-[#171c2f] px-3 py-2 text-xs outline-none"
               />
               <button
                 type="button"
@@ -883,15 +887,15 @@ export default function CaptainPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/15 soft-panel p-6">
-          <h2 className="text-xl font-bold text-white">Assignments</h2>
+        <section className="rounded-3xl border border-[#e8dccf] soft-panel p-6">
+          <h2 className="text-xl font-bold text-slate-900">Assignments</h2>
 
           <form className="mt-4 grid gap-3" onSubmit={handleCreateAssignment}>
             <input
               value={assignmentTitle}
               onChange={(event) => setAssignmentTitle(event.target.value)}
               placeholder="Assignment title"
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+              className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
             />
             <div className="flex gap-2">
               <button
@@ -899,8 +903,8 @@ export default function CaptainPage() {
                 onClick={() => setReferenceSource("upload")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   referenceSource === "upload"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-700"
                 } cursor-pointer`}
               >
                 Upload file
@@ -910,8 +914,8 @@ export default function CaptainPage() {
                 onClick={() => setReferenceSource("youtube")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   referenceSource === "youtube"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-700"
                 } cursor-pointer`}
               >
                 YouTube URL
@@ -922,33 +926,33 @@ export default function CaptainPage() {
                 type="file"
                 accept="video/*"
                 onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
-                className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
               />
             ) : (
               <input
                 value={youtubeUrl}
                 onChange={(event) => setYoutubeUrl(event.target.value)}
                 placeholder="https://www.youtube.com/watch?v=..."
-                className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
               />
             )}
             <div className="grid gap-2 sm:grid-cols-2">
-              <label className="grid gap-1 text-xs text-slate-300">
+              <label className="grid gap-1 text-xs text-slate-700">
                 <span>Due date</span>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(event) => setDueDate(event.target.value)}
-                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                  className="captain-datetime rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
                 />
               </label>
-              <label className="grid gap-1 text-xs text-slate-300">
+              <label className="grid gap-1 text-xs text-slate-700">
                 <span>Due time</span>
                 <input
                   type="time"
                   value={dueTime}
                   onChange={(event) => setDueTime(event.target.value)}
-                  className="captain-datetime rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+                  className="captain-datetime rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
                 />
               </label>
             </div>
@@ -956,10 +960,10 @@ export default function CaptainPage() {
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
               placeholder="Optional instructions"
-              className="min-h-24 rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+              className="min-h-24 rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
             />
-            <div className="rounded-xl border border-white/20 bg-[#121527] p-3">
-              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-300">Assign team members</p>
+            <div className="rounded-xl border border-[#decfbe] bg-[#fffaf5] p-3">
+              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-700">Assign team members</p>
               <div className="grid gap-2">
                 {members.map((member) => (
                   <label key={member.user_id} className="flex items-center gap-2 text-xs text-slate-200">
@@ -976,7 +980,7 @@ export default function CaptainPage() {
                     />
                     <span>
                       {member.display_name?.trim() ? member.display_name : member.user_id}{" "}
-                      <span className="text-slate-400">({member.role})</span>
+                      <span className="text-slate-500">({member.role})</span>
                     </span>
                   </label>
                 ))}
@@ -985,20 +989,20 @@ export default function CaptainPage() {
             <button
               type="submit"
               disabled={isCreatingAssignment}
-              className="cursor-pointer rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+              className="cursor-pointer rounded-full bg-[#ff7f5f] px-4 py-2 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isCreatingAssignment ? "Creating..." : "Create Assignment"}
             </button>
-            {assignmentProgress ? <p className="text-xs text-slate-300">{assignmentProgress}</p> : null}
+            {assignmentProgress ? <p className="text-xs text-slate-700">{assignmentProgress}</p> : null}
             {uploadPercent !== null ? (
               <div className="space-y-1">
                 <div className="h-2 overflow-hidden rounded-full bg-[#1d233a]">
                   <div
-                    className="h-full bg-[#2fa8ff] transition-all"
+                    className="h-full bg-[#ff7f5f] transition-all"
                     style={{ width: `${uploadPercent}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-300">
+                <p className="text-xs text-slate-700">
                   Upload {uploadPercent}%
                   {assignmentProgress?.startsWith("Uploading") && uploadEtaSeconds !== null
                     ? ` • ~${uploadEtaSeconds}s remaining`
@@ -1015,8 +1019,8 @@ export default function CaptainPage() {
                 onClick={() => setAssignmentFilter("active")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentFilter === "active"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 text-slate-700"
                 }`}
               >
                 Active
@@ -1026,8 +1030,8 @@ export default function CaptainPage() {
                 onClick={() => setAssignmentFilter("archived")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentFilter === "archived"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 text-slate-700"
                 }`}
               >
                 Archived
@@ -1037,8 +1041,8 @@ export default function CaptainPage() {
                 onClick={() => setAssignmentFilter("all")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentFilter === "all"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 text-slate-700"
                 }`}
               >
                 All
@@ -1046,9 +1050,9 @@ export default function CaptainPage() {
             </div>
 
             {filteredAssignments.map((assignment) => (
-              <article key={assignment.id} className="rounded-xl border border-white/15 bg-[#121527] p-4">
-                <p className="text-sm font-semibold text-white">{assignment.title}</p>
-                <p className="mt-1 text-xs text-slate-300">
+              <article key={assignment.id} className="rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
+                <p className="text-sm font-semibold text-slate-900">{assignment.title}</p>
+                <p className="mt-1 text-xs text-slate-700">
                   Due: {new Date(assignment.due_at).toLocaleString()}
                 </p>
                 {assignment.archived_at ? (
@@ -1056,13 +1060,13 @@ export default function CaptainPage() {
                     Archived: {new Date(assignment.archived_at).toLocaleString()}
                   </p>
                 ) : null}
-                <p className="mt-1 text-xs text-slate-300">Reference video: {assignment.reference_video_id}</p>
+                <p className="mt-1 text-xs text-slate-700">Reference video: {assignment.reference_video_id}</p>
                 {typeof assignment.assignee_count === "number" ? (
-                  <p className="mt-1 text-xs text-slate-300">Assignees: {assignment.assignee_count}</p>
+                  <p className="mt-1 text-xs text-slate-700">Assignees: {assignment.assignee_count}</p>
                 ) : null}
                 <Link
                   href={`/captain/assignments/${assignment.id}`}
-                  className="mt-2 inline-flex text-xs font-semibold text-[#8fd4ff] underline"
+                  className="mt-2 inline-flex text-xs font-semibold text-[#d64f72] underline"
                 >
                   View assignee status
                 </Link>

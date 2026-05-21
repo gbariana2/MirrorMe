@@ -159,17 +159,17 @@ export default function CaptainAssignmentStatusPage() {
   }
 
   return (
-    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
-      <div className="mx-auto w-full max-w-5xl rounded-3xl border border-white/15 soft-panel p-6">
+    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-900 sm:px-10 lg:px-16">
+      <div className="mx-auto w-full max-w-5xl rounded-3xl border border-[#e8dccf] soft-panel p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">Assignment Assignee Status</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Assignment Assignee Status</h1>
           <div className="flex items-center gap-4">
             <Link
               href={`/captain/assignments/${assignmentId}/run`}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 submittedAssignees.length === 0
-                  ? "pointer-events-none bg-slate-500/40 text-slate-300"
-                  : "bg-[#2fa8ff] text-slate-950"
+                  ? "pointer-events-none bg-slate-500/40 text-slate-700"
+                  : "bg-[#ff7f5f] text-slate-950"
               }`}
             >
               Batch Runner ({submittedAssignees.length})
@@ -182,30 +182,30 @@ export default function CaptainAssignmentStatusPage() {
             >
               {isRefreshing ? "Refreshing..." : "Refresh"}
             </button>
-            <Link href="/captain" className="text-sm font-semibold text-[#8fd4ff] underline">
+            <Link href="/captain" className="text-sm font-semibold text-[#d64f72] underline">
               Back to captain dashboard
             </Link>
-            <Link href="/" className="text-sm font-semibold text-[#8fd4ff] underline">
+            <Link href="/" className="text-sm font-semibold text-[#d64f72] underline">
               Home
             </Link>
           </div>
         </div>
 
         {!statusData && !error ? (
-          <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
-            <p className="text-sm text-slate-300">Loading assignment details...</p>
+          <div className="mt-4 rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
+            <p className="text-sm text-slate-700">Loading assignment details...</p>
           </div>
         ) : null}
 
         {statusData ? (
-          <div className="mt-4 rounded-xl border border-white/15 bg-[#121527] p-4">
-            <p className="text-sm font-semibold text-white">{statusData.assignment.title}</p>
+          <div className="mt-4 rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
+            <p className="text-sm font-semibold text-slate-900">{statusData.assignment.title}</p>
             {statusData.assignment.archived_at ? (
               <p className="mt-1 text-xs font-semibold text-amber-300">
                 Archived on {new Date(statusData.assignment.archived_at).toLocaleString()}
               </p>
             ) : null}
-            <p className="mt-1 text-xs text-slate-300">
+            <p className="mt-1 text-xs text-slate-700">
               Due: {new Date(statusData.assignment.due_at).toLocaleString()}
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
@@ -248,14 +248,14 @@ export default function CaptainAssignmentStatusPage() {
               ))}
             </div>
 
-            <div className="mt-4 rounded-lg border border-white/15 bg-[#171c2f] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">Edit assignment</p>
+            <div className="mt-4 rounded-lg border border-[#e8dccf] bg-[#171c2f] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">Edit assignment</p>
               <div className="mt-3 grid gap-3">
                 <input
                   type="datetime-local"
                   value={editDueAt}
                   onChange={(event) => setEditDueAt(event.target.value)}
-                  className="rounded-xl border border-white/20 bg-[#121527] px-3 py-2 text-xs outline-none"
+                  className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-3 py-2 text-xs outline-none"
                 />
                 <div className="grid gap-2">
                   {statusData.teamMemberOptions.map((member) => (
@@ -273,7 +273,7 @@ export default function CaptainAssignmentStatusPage() {
                       />
                       <span>
                         {member.displayName?.trim() ? member.displayName : member.userId}{" "}
-                        <span className="text-slate-400">({member.role})</span>
+                        <span className="text-slate-500">({member.role})</span>
                       </span>
                     </label>
                   ))}
@@ -282,7 +282,7 @@ export default function CaptainAssignmentStatusPage() {
                   type="button"
                   onClick={saveAssignmentEdits}
                   disabled={isSaving}
-                  className="w-fit rounded-full bg-[#2fa8ff] px-3 py-1 text-xs font-semibold text-slate-950 disabled:opacity-60"
+                  className="w-fit rounded-full bg-[#ff7f5f] px-3 py-1 text-xs font-semibold text-slate-950 disabled:opacity-60"
                 >
                   {isSaving ? "Saving..." : "Save changes"}
                 </button>
@@ -305,27 +305,27 @@ export default function CaptainAssignmentStatusPage() {
 
         <div className="mt-5 space-y-3">
           {statusData?.assignees.map((assignee) => (
-            <article key={assignee.dancerUserId} className="rounded-xl border border-white/15 bg-[#121527] p-4">
-              <p className="text-sm font-semibold text-white">{assignee.dancerUserId}</p>
-              <p className="mt-1 text-xs text-slate-300">
+            <article key={assignee.dancerUserId} className="rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
+              <p className="text-sm font-semibold text-slate-900">{assignee.dancerUserId}</p>
+              <p className="mt-1 text-xs text-slate-700">
                 Status: {assignee.status.replace("_", " ")}
               </p>
               {assignee.submittedAt ? (
-                <p className="mt-1 text-xs text-slate-300">
+                <p className="mt-1 text-xs text-slate-700">
                   Submitted: {new Date(assignee.submittedAt).toLocaleString()}
                 </p>
               ) : null}
               {assignee.reviewPath ? (
-                <Link href={assignee.reviewPath} className="mt-2 inline-flex text-xs font-semibold text-[#8fd4ff] underline">
+                <Link href={assignee.reviewPath} className="mt-2 inline-flex text-xs font-semibold text-[#d64f72] underline">
                   Open review
                 </Link>
               ) : null}
             </article>
           ))}
           {statusData && statusData.assignees.length === 0 ? (
-            <article className="rounded-xl border border-dashed border-white/20 bg-[#121527] p-4">
-              <p className="text-sm font-semibold text-white">No assignees yet</p>
-              <p className="mt-1 text-xs text-slate-300">
+            <article className="rounded-xl border border-dashed border-[#decfbe] bg-[#fffaf5] p-4">
+              <p className="text-sm font-semibold text-slate-900">No assignees yet</p>
+              <p className="mt-1 text-xs text-slate-700">
                 This assignment has no assigned dancers. Add dancers in the edit section above.
               </p>
             </article>

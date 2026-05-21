@@ -298,17 +298,17 @@ export function FullPlaybackComparison({ analysisId, referenceVideoUrl, submissi
   }, [frames, syncReferenceTime, updateOverlayFromCurrentTime]);
 
   return (
-    <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">Full Playback</p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">Synced side-by-side with live submission overlay</h2>
-      <p className="mt-3 text-sm text-slate-300">
+    <section className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">Full Playback</p>
+      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Synced side-by-side with live submission overlay</h2>
+      <p className="mt-3 text-sm text-slate-700">
         Submission skeleton colors update over time. Green means relatively aligned at current playback moment; red indicates a major deviation.
       </p>
 
-      {loading ? <p className="mt-4 text-sm text-slate-300">Loading timeline...</p> : null}
+      {loading ? <p className="mt-4 text-sm text-slate-700">Loading timeline...</p> : null}
       {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
       {!loading && !error && !canRender ? (
-        <p className="mt-4 text-sm text-slate-300">Timeline or videos are unavailable for this analysis.</p>
+        <p className="mt-4 text-sm text-slate-700">Timeline or videos are unavailable for this analysis.</p>
       ) : null}
 
       {canRender ? (

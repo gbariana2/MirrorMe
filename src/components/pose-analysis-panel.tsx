@@ -546,16 +546,16 @@ export function PoseAnalysisPanel({
   }, [autoRun, isRunning, isConfigured, referenceVideoUrl]);
 
   return (
-    <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+    <section className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
             Pose Analysis
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
             Run the first MediaPipe comparison pass
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700">
             This samples the full duration of both videos at 0.5-second intervals, computes
             weighted joint-angle differences, stores frames and issues, and updates the analysis record.
           </p>
@@ -565,25 +565,25 @@ export function PoseAnalysisPanel({
           type="button"
           onClick={runAnalysis}
           disabled={!isConfigured || isRunning || isYouTubeUrl(referenceVideoUrl)}
-          className="rounded-full bg-[#2fa8ff] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.35)] transition hover:bg-[#66c2ff] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[#ff7f5f] px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_20px_rgba(47,168,255,0.35)] transition hover:bg-[#ff997f] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isRunning ? "Analyzing..." : "Run pose analysis"}
         </button>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Stored issues</p>
-          <p className="mt-2 text-3xl font-semibold text-white">{issueCount}</p>
+        <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Stored issues</p>
+          <p className="mt-2 text-3xl font-semibold text-slate-900">{issueCount}</p>
         </div>
-        <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Latest score</p>
+        <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Latest score</p>
           <p className={`mt-2 text-3xl font-semibold ${scoreTone}`}>
             {score === null ? "--" : `${score}/100`}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sampling window</p>
+        <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Sampling window</p>
           <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 0.5s</p>
         </div>
       </div>
@@ -595,14 +595,14 @@ export function PoseAnalysisPanel({
       ) : null}
 
       {syncDiagnostics ? (
-        <div className="mt-6 rounded-2xl border border-white/15 bg-[#161922] p-4">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Sync diagnostics</p>
+        <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Sync diagnostics</p>
           <p className="mt-2 text-sm text-slate-200">
             Selected offset: {formatOffsetMs(syncDiagnostics.selectedOffsetMs)} | Method: {syncDiagnostics.method.replace("_", " ")} | Confidence: {Math.round(syncDiagnostics.confidence * 100)}%
           </p>
           <div className="mt-3 space-y-2">
             {syncDiagnostics.candidates.map((candidate, index) => (
-              <p key={`${candidate.offsetMs}-${index}`} className="text-xs text-slate-300">
+              <p key={`${candidate.offsetMs}-${index}`} className="text-xs text-slate-700">
                 #{index + 1}: {formatOffsetMs(candidate.offsetMs)} | aligned {candidate.alignedFrameCount} frames | avg delta {candidate.averageDelta} | score {candidate.score}
               </p>
             ))}
@@ -621,9 +621,9 @@ export function PoseAnalysisPanel({
           {previews.map((preview) => (
             <div
               key={preview.timestampMs}
-              className="rounded-2xl border border-white/15 bg-[#161922] p-4"
+              className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4"
             >
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                 {formatTimestampMs(preview.timestampMs)}
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

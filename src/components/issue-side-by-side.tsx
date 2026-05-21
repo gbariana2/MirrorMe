@@ -404,9 +404,9 @@ export function IssueSideBySide({
   }, [frameData, redPointIndexes, expandedIssueId]);
 
   return (
-    <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">Flagged Moments</p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">Major and minor deviations</h2>
+    <section className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">Flagged Moments</p>
+      <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">Major and minor deviations</h2>
       <div className="mt-4 flex flex-wrap gap-2">
         {(["all", "major", "minor"] as const).map((filter) => (
           <button
@@ -415,8 +415,8 @@ export function IssueSideBySide({
             onClick={() => setSeverityFilter(filter)}
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
               severityFilter === filter
-                ? "bg-[#2fa8ff] text-slate-950"
-                : "border border-white/25 bg-transparent text-slate-300"
+                ? "bg-[#ff7f5f] text-slate-950"
+                : "border border-white/25 bg-transparent text-slate-700"
             }`}
           >
             {filter === "all" ? "All" : filter === "major" ? "Major" : "Minor"}
@@ -425,7 +425,7 @@ export function IssueSideBySide({
       </div>
 
       {filteredIssues.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-white/25 bg-[#161922] p-5 text-sm text-slate-300">
+        <div className="mt-5 rounded-2xl border border-dashed border-white/25 bg-[#fff6ef] p-5 text-sm text-slate-700">
           No {severityFilter === "all" ? "major or minor" : severityFilter} mismatches were flagged.
         </div>
       ) : (
@@ -433,11 +433,11 @@ export function IssueSideBySide({
           {filteredIssues.map((issue) => {
             const isExpanded = expandedIssueId === issue.id;
             return (
-              <article key={issue.id} className="rounded-2xl border border-white/15 bg-[#161922] p-4">
+              <article key={issue.id} className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-white">{formatJointName(issue.jointName)}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                    <p className="text-sm font-semibold text-slate-900">{formatJointName(issue.jointName)}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                       {formatTimestampMs(issue.timestampMs)} • {issue.severity}
                     </p>
                   </div>
@@ -446,22 +446,22 @@ export function IssueSideBySide({
                     onClick={() => {
                       void expandIssue(issue);
                     }}
-                    className="rounded-full border border-[#8fd4ff]/55 px-3 py-1 text-xs font-semibold text-[#8fd4ff]"
+                    className="rounded-full border border-[#8fd4ff]/55 px-3 py-1 text-xs font-semibold text-[#d64f72]"
                   >
                     {isExpanded ? "Hide comparison" : "View side-by-side"}
                   </button>
                 </div>
-                {issue.notes ? <p className="mt-2 text-sm text-slate-300">{issue.notes}</p> : null}
+                {issue.notes ? <p className="mt-2 text-sm text-slate-700">{issue.notes}</p> : null}
 
                 {isExpanded ? (
-                  <div className="mt-4 rounded-xl border border-white/15 bg-[#101625] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+                  <div className="mt-4 rounded-xl border border-[#e8dccf] bg-[#101625] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
                       Side-by-side at {formatTimestampMs(issue.timestampMs)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-slate-500">
                       Green = relatively aligned. Red = high deviation pivots/connectors.
                     </p>
-                    {isFrameLoading ? <p className="mt-2 text-xs text-slate-300">Loading image comparison...</p> : null}
+                    {isFrameLoading ? <p className="mt-2 text-xs text-slate-700">Loading image comparison...</p> : null}
                     {frameError ? <p className="mt-2 text-xs text-rose-300">{frameError}</p> : null}
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                       <canvas ref={referenceCanvasRef} className="w-full rounded-lg bg-[#0a1020]" />

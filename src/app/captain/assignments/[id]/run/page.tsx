@@ -107,10 +107,10 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
   }, [currentIndex, isRunning, submittedQueue.length]);
 
   return (
-    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
-      <div className="mx-auto w-full max-w-6xl rounded-3xl border border-white/15 soft-panel p-6">
+    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-900 sm:px-10 lg:px-16">
+      <div className="mx-auto w-full max-w-6xl rounded-3xl border border-[#e8dccf] soft-panel p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-white">Batch Analysis Runner</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Batch Analysis Runner</h1>
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -119,22 +119,22 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
                 setIsRunning(true);
               }}
               disabled={submittedQueue.length === 0 || isRunning}
-              className="rounded-full bg-[#2fa8ff] px-4 py-2 text-xs font-bold text-slate-950 disabled:opacity-40"
+              className="rounded-full bg-[#ff7f5f] px-4 py-2 text-xs font-bold text-slate-950 disabled:opacity-40"
             >
               {isRunning ? "Running..." : `Start (${submittedQueue.length})`}
             </button>
-            <Link href={`/captain/assignments/${assignmentId}`} className="text-xs font-semibold text-[#8fd4ff] underline">
+            <Link href={`/captain/assignments/${assignmentId}`} className="text-xs font-semibold text-[#d64f72] underline">
               Back to status page
             </Link>
           </div>
         </div>
 
-        <p className="mt-3 text-sm text-slate-300">
+        <p className="mt-3 text-sm text-slate-700">
           This runner processes submitted dancers one-by-one in a single tab and advances
           automatically when each status changes from submitted.
         </p>
 
-        <div className="mt-5 rounded-xl border border-white/15 bg-[#121527] p-4 text-xs text-slate-300">
+        <div className="mt-5 rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4 text-xs text-slate-700">
           Current:{" "}
           {isRunning
             ? `${Math.min(currentIndex + 1, submittedQueue.length)} / ${submittedQueue.length}`
@@ -146,10 +146,10 @@ export default function CaptainAssignmentBatchRunPage({ params }: Props) {
           <iframe
             title="Batch analysis runner frame"
             src={`${currentAssignee.reviewPath}?autorun=1`}
-            className="mt-5 h-[760px] w-full rounded-xl border border-white/15 bg-black"
+            className="mt-5 h-[760px] w-full rounded-xl border border-[#e8dccf] bg-black"
           />
         ) : (
-          <div className="mt-5 rounded-xl border border-dashed border-white/20 bg-[#121527] p-6 text-sm text-slate-300">
+          <div className="mt-5 rounded-xl border border-dashed border-[#decfbe] bg-[#fffaf5] p-6 text-sm text-slate-700">
             {submittedQueue.length === 0
               ? "No submitted assignees are waiting for analysis."
               : "Press Start to begin sequential analysis in this tab."}

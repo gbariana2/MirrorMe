@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050505;
-  --foreground: #eef4ff;
+  --background: #fff8f2;
+  --foreground: #2f1d17;
 }
 
 @theme inline {
@@ -27,44 +27,48 @@ body {
 }
 
 .phulkari-bg {
-  background: #050505;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255, 162, 138, 0.2), transparent 32%),
+    radial-gradient(circle at 80% 20%, rgba(229, 95, 133, 0.16), transparent 36%),
+    linear-gradient(180deg, #fff8f2, #fff3ea 55%, #ffefe3);
 }
 
 .soft-panel {
-  background: linear-gradient(160deg, rgba(17, 20, 30, 0.95), rgba(10, 12, 18, 0.95));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 244, 235, 0.9));
+  backdrop-filter: blur(8px);
 }
 
 .captain-datetime {
-  color: #ffffff;
-  color-scheme: dark;
+  color: #2f1d17;
+  color-scheme: light;
 }
 
 .captain-datetime::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.8) contrast(1.2) !important;
+  filter: invert(16%) sepia(28%) saturate(1524%) hue-rotate(326deg) brightness(96%) contrast(91%) !important;
   opacity: 1 !important;
   cursor: pointer;
 }
 
 .captain-datetime[type="date"]::-webkit-calendar-picker-indicator,
 .captain-datetime[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.8) contrast(1.2) !important;
+  filter: invert(16%) sepia(28%) saturate(1524%) hue-rotate(326deg) brightness(96%) contrast(91%) !important;
   opacity: 1 !important;
 }
 
 .captain-datetime::-webkit-datetime-edit {
-  color: #ffffff;
+  color: #2f1d17;
 }
 
 .captain-datetime::-webkit-datetime-edit-fields-wrapper {
-  color: #ffffff;
+  color: #2f1d17;
 }
 
 .captain-datetime::-webkit-datetime-edit-text {
-  color: #cbd5e1;
+  color: #8a6b60;
 }
 
 .captain-datetime::-webkit-date-and-time-value {
-  color: #ffffff;
+  color: #2f1d17;
 }
 
 .captain-datetime::-moz-focus-inner {

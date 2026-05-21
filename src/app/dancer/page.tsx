@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/components/brand-mark";
 
 type TeamRow = {
   role: "captain" | "dancer";
@@ -351,16 +352,19 @@ function DancerDashboard() {
   }
 
   return (
-    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
+    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-900 sm:px-10 lg:px-16">
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
-        <section className="rounded-3xl border border-white/15 soft-panel p-6">
+        <section className="rounded-3xl border border-[#e8dccf] soft-panel p-6">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold text-white">Dancer Dashboard</h1>
-            <Link href="/" className="text-sm font-semibold text-[#8fd4ff] underline">
+            <div className="flex items-center gap-3">
+              <BrandMark withWordmark={false} size={34} />
+              <h1 className="text-2xl font-bold text-slate-900">Dancer Dashboard</h1>
+            </div>
+            <Link href="/" className="text-sm font-semibold text-[#d64f72] underline">
               Back to home
             </Link>
           </div>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-2 text-sm text-slate-700">
             Join teams, open weekly assignments, and submit before deadline.
           </p>
           {teams.some((team) => team.role === "captain") ? (
@@ -370,8 +374,8 @@ function DancerDashboard() {
                 onClick={() => setAssignmentMode("dancer")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentMode === "dancer"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-700"
                 }`}
               >
                 My assigned work
@@ -381,8 +385,8 @@ function DancerDashboard() {
                 onClick={() => setAssignmentMode("captain")}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentMode === "captain"
-                    ? "bg-[#2fa8ff] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-300"
+                    ? "bg-[#ff7f5f] text-slate-950"
+                    : "border border-white/25 bg-transparent text-slate-700"
                 }`}
               >
                 Captain team view
@@ -395,11 +399,11 @@ function DancerDashboard() {
               value={joinCode}
               onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
               placeholder="Paste team join code (example: AB12CD)"
-              className="rounded-xl border border-white/20 bg-[#121527] px-4 py-3 text-sm outline-none"
+              className="rounded-xl border border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm outline-none"
             />
             <button
               type="submit"
-              className="rounded-full bg-[#2fa8ff] px-4 py-2 text-sm font-bold text-slate-950"
+              className="rounded-full bg-[#ff7f5f] px-4 py-2 text-sm font-bold text-slate-950"
             >
               Join Team
             </button>
@@ -414,27 +418,27 @@ function DancerDashboard() {
                 className={`w-full rounded-xl border px-4 py-3 text-left ${
                   selectedTeamId === item.team.id
                     ? "border-[#8fd4ff] bg-[#1a2037]"
-                    : "border-white/15 bg-[#121527]"
+                    : "border-[#e8dccf] bg-[#fffaf5]"
                 }`}
               >
-                <p className="text-sm font-semibold text-white">{item.team.name}</p>
-                <p className="mt-1 text-xs text-slate-300">Role: {item.role}</p>
+                <p className="text-sm font-semibold text-slate-900">{item.team.name}</p>
+                <p className="mt-1 text-xs text-slate-700">Role: {item.role}</p>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/15 soft-panel p-6">
-          <h2 className="text-xl font-bold text-white">Open Assignments</h2>
+        <section className="rounded-3xl border border-[#e8dccf] soft-panel p-6">
+          <h2 className="text-xl font-bold text-slate-900">Open Assignments</h2>
 
           <div className="mt-4 space-y-4">
             {assignments.map((assignment) => (
-              <article key={assignment.id} className="rounded-xl border border-white/15 bg-[#121527] p-4">
-                <p className="text-sm font-semibold text-white">{assignment.title}</p>
-                <p className="mt-1 text-xs text-slate-300">
+              <article key={assignment.id} className="rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-4">
+                <p className="text-sm font-semibold text-slate-900">{assignment.title}</p>
+                <p className="mt-1 text-xs text-slate-700">
                   Due: {new Date(assignment.due_at).toLocaleString()}
                 </p>
-                <p className="mt-1 text-xs text-slate-300">Reference video: {assignment.reference_video_id}</p>
+                <p className="mt-1 text-xs text-slate-700">Reference video: {assignment.reference_video_id}</p>
                 <div className="mt-3 flex gap-2">
                   <input
                     type="file"
@@ -445,29 +449,29 @@ function DancerDashboard() {
                         [assignment.id]: event.target.files?.[0] ?? null,
                       }))
                     }
-                    className="w-full rounded-xl border border-white/20 bg-[#171c2f] px-3 py-2 text-xs outline-none"
+                    className="w-full rounded-xl border border-[#decfbe] bg-[#171c2f] px-3 py-2 text-xs outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => submitAssignment(assignment.id)}
                     disabled={isSubmitting[assignment.id] || !submissionFiles[assignment.id]}
-                    className="rounded-full bg-[#2fa8ff] px-4 py-2 text-xs font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full bg-[#ff7f5f] px-4 py-2 text-xs font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmitting[assignment.id] ? "Submitting..." : "Submit"}
                   </button>
                 </div>
                 {submitProgress[assignment.id] ? (
-                  <p className="mt-2 text-xs text-slate-300">{submitProgress[assignment.id]}</p>
+                  <p className="mt-2 text-xs text-slate-700">{submitProgress[assignment.id]}</p>
                 ) : null}
                 {uploadPercent[assignment.id] !== null && uploadPercent[assignment.id] !== undefined ? (
                   <div className="mt-2 space-y-1">
                     <div className="h-2 overflow-hidden rounded-full bg-[#1d233a]">
                       <div
-                        className="h-full bg-[#2fa8ff] transition-all"
+                        className="h-full bg-[#ff7f5f] transition-all"
                         style={{ width: `${uploadPercent[assignment.id] ?? 0}%` }}
                       />
                     </div>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-slate-700">
                       Upload {uploadPercent[assignment.id]}%
                       {submitProgress[assignment.id]?.startsWith("Uploading")
                       && uploadEtaSeconds[assignment.id] !== null
@@ -480,7 +484,7 @@ function DancerDashboard() {
                 {reviewLinks[assignment.id] ? (
                   <Link
                     href={reviewLinks[assignment.id] ?? "#"}
-                    className="mt-3 inline-flex text-xs font-semibold text-[#8fd4ff] underline"
+                    className="mt-3 inline-flex text-xs font-semibold text-[#d64f72] underline"
                   >
                     Open review
                   </Link>
@@ -500,9 +504,9 @@ export default function DancerPage() {
   return (
     <Suspense
       fallback={
-        <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
-          <div className="mx-auto w-full max-w-6xl rounded-3xl border border-white/15 soft-panel p-6">
-            <p className="text-sm text-slate-300">Loading dancer dashboard...</p>
+        <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-900 sm:px-10 lg:px-16">
+          <div className="mx-auto w-full max-w-6xl rounded-3xl border border-[#e8dccf] soft-panel p-6">
+            <p className="text-sm text-slate-700">Loading dancer dashboard...</p>
           </div>
         </main>
       }

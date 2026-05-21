@@ -5,6 +5,7 @@ import { IssueSideBySide } from "@/components/issue-side-by-side";
 import { PoseAnalysisPanel } from "@/components/pose-analysis-panel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isYouTubeUrl } from "@/lib/youtube";
+import { BrandMark } from "@/components/brand-mark";
 
 type ReviewPageProps = {
   params: Promise<{
@@ -77,7 +78,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
   const overallScore = typeof analysis.overall_score === "number" ? analysis.overall_score : null;
   const scoreTone =
     overallScore === null
-      ? "text-slate-300"
+      ? "text-slate-700"
       : overallScore >= 85
         ? "text-emerald-300"
         : overallScore >= 70
@@ -111,47 +112,48 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
   }
 
   return (
-    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-100 sm:px-10 lg:px-16">
+    <main className="phulkari-bg min-h-screen px-6 py-8 text-slate-900 sm:px-10 lg:px-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <section className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+        <section className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
+              <BrandMark className="mb-4" withWordmark={false} />
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
                 Analysis Review
               </p>
-              <h1 className="mt-2 bg-gradient-to-r from-[#b8e4ff] via-[#7ecbff] to-[#37adff] bg-clip-text text-3xl font-semibold tracking-[-0.03em] text-transparent">
+              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
                 {submission?.title ?? "Submission"} vs. {reference?.title ?? "Reference"}
               </h1>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
+              <p className="mt-3 text-sm leading-6 text-slate-700">
                 Analysis id: <span className="font-mono text-xs">{analysis.id}</span>
               </p>
             </div>
 
-            <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200">
+            <div className="rounded-full border border-[#decfbe] bg-white/10 px-4 py-2 text-sm font-medium text-slate-200">
               Status: {analysis.status}
             </div>
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+            <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                 Overall score
               </p>
-              <p className="mt-2 text-3xl font-semibold text-white">
+              <p className="mt-2 text-3xl font-semibold text-slate-900">
                 <span className={scoreTone}>{overallScore === null ? "--" : `${overallScore}/100`}</span>
               </p>
               <p className={`mt-2 text-xs font-semibold uppercase tracking-[0.14em] ${scoreTone}`}>
                 {scoreBand}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+            <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                 Issues detected
               </p>
-              <p className="mt-2 text-3xl font-semibold text-white">{issues.length}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">{issues.length}</p>
             </div>
-            <div className="rounded-2xl border border-white/15 bg-[#161922] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+            <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                 Created (UTC)
               </p>
               <p className="mt-2 text-sm font-medium text-slate-200">
@@ -162,13 +164,13 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
         </section>
 
         <section className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
-          <div className="rounded-[2rem] border border-white/15 soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+          <div className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
                   Uploaded Assets
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
                   Reference and submission
                 </h2>
               </div>
@@ -184,15 +186,15 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
               {[reference, submission].map((video, index) => (
                 <article
                   key={video?.id ?? index}
-                  className="rounded-2xl border border-white/15 bg-[#161922] p-4"
+                  className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4"
                 >
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                     {index === 0 ? "Reference" : "Submission"}
                   </p>
-                  <h3 className="mt-2 text-lg font-semibold text-white">
+                  <h3 className="mt-2 text-lg font-semibold text-slate-900">
                     {video?.title ?? "Untitled video"}
                   </h3>
-                  <p className="mt-3 text-sm text-slate-300">
+                  <p className="mt-3 text-sm text-slate-700">
                     Duration:{" "}
                     {video?.duration_ms ? formatTimestampMs(video.duration_ms) : "Unavailable (legacy upload)"}
                   </p>
@@ -201,7 +203,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
                       href={video.file_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-4 inline-flex text-sm font-medium text-[#8fd4ff] underline"
+                      className="mt-4 inline-flex text-sm font-medium text-[#d64f72] underline"
                     >
                       {isYouTubeUrl(video.file_url) ? "Open YouTube reference" : "Open stored asset"}
                     </a>
@@ -211,35 +213,35 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
             </div>
           </div>
 
-          <aside className="rounded-[2rem] border border-white/15 soft-panel p-6 text-slate-100 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8fd4ff]">
+          <aside className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 text-slate-900 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
               Processing State
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
               Feedback Report
             </h2>
             <div className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Status</p>
-                <p className="mt-2 text-sm font-semibold text-white">{analysis.status}</p>
+              <div className="rounded-2xl border border-[#e8dccf] bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Status</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{analysis.status}</p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Completed (UTC)</p>
-                <p className="mt-2 text-sm font-semibold text-white">{completedAtUtcDisplay ?? "Not completed yet"}</p>
+              <div className="rounded-2xl border border-[#e8dccf] bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Completed (UTC)</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{completedAtUtcDisplay ?? "Not completed yet"}</p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Issue count</p>
-                <p className="mt-2 text-sm font-semibold text-white">{issues.length}</p>
-                <p className="mt-1 text-xs text-slate-300">Major: {majorIssueCount} • Minor: {minorIssueCount}</p>
+              <div className="rounded-2xl border border-[#e8dccf] bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Issue count</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{issues.length}</p>
+                <p className="mt-1 text-xs text-slate-700">Major: {majorIssueCount} • Minor: {minorIssueCount}</p>
               </div>
             </div>
 
             {analysis.summary ? (
-              <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm leading-6 text-slate-300">
+              <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-white/5 p-4 text-sm leading-6 text-slate-700">
                 {analysis.summary}
               </div>
             ) : (
-              <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm leading-6 text-slate-300">
+              <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-white/5 p-4 text-sm leading-6 text-slate-700">
                 No generated summary yet.
               </div>
             )}
