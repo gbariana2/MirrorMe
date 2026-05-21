@@ -334,7 +334,7 @@ export function CompareForm() {
             <input
               value={referenceTitle}
               onChange={(event) => setReferenceTitle(event.target.value)}
-              className="rounded-2xl border border-[#e8dccf] bg-[#101625] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#5ab8ff]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#5ab8ff]"
               placeholder="Reference choreography"
             />
           </label>
@@ -345,7 +345,7 @@ export function CompareForm() {
               type="file"
               accept="video/*"
               onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)}
-              className="rounded-2xl border border-dashed border-white/30 bg-[#101625] px-4 py-3 text-sm text-slate-200"
+              className="rounded-2xl border border-dashed border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm text-slate-700 file:mr-3 file:rounded-full file:border-0 file:bg-[#ff7f5f] file:px-3 file:py-1 file:text-xs file:font-semibold file:text-slate-950"
             />
             <span className="text-xs text-slate-500">{formatFileLabel(referenceFile)}</span>
           </label>
@@ -355,7 +355,7 @@ export function CompareForm() {
             <input
               value={submissionTitle}
               onChange={(event) => setSubmissionTitle(event.target.value)}
-              className="rounded-2xl border border-[#e8dccf] bg-[#101625] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#5ab8ff]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#5ab8ff]"
               placeholder="Dancer submission"
             />
           </label>
@@ -366,7 +366,7 @@ export function CompareForm() {
               type="file"
               accept="video/*"
               onChange={(event) => setSubmissionFile(event.target.files?.[0] ?? null)}
-              className="rounded-2xl border border-dashed border-white/30 bg-[#101625] px-4 py-3 text-sm text-slate-200"
+              className="rounded-2xl border border-dashed border-[#decfbe] bg-[#fffaf5] px-4 py-3 text-sm text-slate-700 file:mr-3 file:rounded-full file:border-0 file:bg-[#ff7f5f] file:px-3 file:py-1 file:text-xs file:font-semibold file:text-slate-950"
             />
             <span className="text-xs text-slate-500">{formatFileLabel(submissionFile)}</span>
           </label>
@@ -420,7 +420,7 @@ export function CompareForm() {
           </button>
           <Link
             href="/"
-            className="rounded-full border border-white/25 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
+            className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#fff1e7]"
           >
             Back home
           </Link>

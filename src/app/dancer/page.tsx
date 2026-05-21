@@ -375,7 +375,7 @@ function DancerDashboard() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentMode === "dancer"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 }`}
               >
                 My assigned work
@@ -386,7 +386,7 @@ function DancerDashboard() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentMode === "captain"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 }`}
               >
                 Captain team view
@@ -417,7 +417,7 @@ function DancerDashboard() {
                 onClick={() => setSelectedTeamId(item.team.id)}
                 className={`w-full rounded-xl border px-4 py-3 text-left ${
                   selectedTeamId === item.team.id
-                    ? "border-[#8fd4ff] bg-[#1a2037]"
+                    ? "border-[#8fd4ff] bg-[#fff1e7]"
                     : "border-[#e8dccf] bg-[#fffaf5]"
                 }`}
               >

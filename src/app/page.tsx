@@ -55,7 +55,7 @@ export default function Home() {
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <Link
               href="/compare"
-              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#171c2f]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#fff1e7]"
             >
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Solo Mode</p>
               <p className="mt-2 text-xl font-bold text-slate-900">Compare Now</p>
@@ -66,7 +66,7 @@ export default function Home() {
 
             <Link
               href="/captain"
-              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#171c2f]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#fff1e7]"
             >
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Captain Mode</p>
               <p className="mt-2 text-xl font-bold text-slate-900">Run Team Assignments</p>
@@ -77,7 +77,7 @@ export default function Home() {
 
             <Link
               href="/dancer"
-              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#171c2f]"
+              className="rounded-2xl border border-[#e8dccf] bg-[#fffaf5]/85 p-5 text-left transition hover:border-[#8fd4ff]/55 hover:bg-[#fff1e7]"
             >
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Dancer Mode</p>
               <p className="mt-2 text-xl font-bold text-slate-900">Submit Before Deadline</p>

@@ -15,6 +15,7 @@ export function BrandMark({ size = 40, withWordmark = true, className = "" }: Br
         className="shrink-0"
       >
         <rect x="2" y="2" width="60" height="60" rx="18" fill="#fff1e6" stroke="#e4cdb8" strokeWidth="2" />
+        <path d="M32 9v46" stroke="#d8b7a0" strokeWidth="1.5" strokeDasharray="2.6 2.6" opacity="0.95" />
         <path
           d="M14 46V18l10 12 8-12 8 12 10-12v28"
           fill="none"
@@ -26,11 +27,11 @@ export function BrandMark({ size = 40, withWordmark = true, className = "" }: Br
         <path
           d="M50 46V18l-10 12-8-12-8 12-10-12v28"
           fill="none"
-          stroke="#ff7f5f"
+          stroke="#f2a27a"
           strokeWidth="2.8"
           strokeLinecap="round"
           strokeLinejoin="round"
-          opacity="0.9"
+          opacity="0.95"
         />
       </svg>
       {withWordmark ? (

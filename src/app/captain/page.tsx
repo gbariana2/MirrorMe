@@ -874,12 +874,12 @@ export default function CaptainPage() {
                 max={30}
                 value={seedCount}
                 onChange={(event) => setSeedCount(Number(event.target.value))}
-                className="w-20 rounded-xl border border-[#decfbe] bg-[#171c2f] px-3 py-2 text-xs outline-none"
+                className="w-20 rounded-xl border border-[#decfbe] bg-[#fffaf5] px-3 py-2 text-xs text-slate-900 outline-none"
               />
               <button
                 type="button"
                 onClick={handleSeedDancers}
-                className="rounded-full border border-white/25 px-3 py-2 text-xs font-semibold text-slate-200"
+                className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-2 text-xs font-semibold text-slate-700"
               >
                 Add dummy dancers
               </button>
@@ -904,7 +904,7 @@ export default function CaptainPage() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   referenceSource === "upload"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 } cursor-pointer`}
               >
                 Upload file
@@ -915,7 +915,7 @@ export default function CaptainPage() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   referenceSource === "youtube"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 bg-transparent text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 } cursor-pointer`}
               >
                 YouTube URL
@@ -966,7 +966,7 @@ export default function CaptainPage() {
               <p className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-700">Assign team members</p>
               <div className="grid gap-2">
                 {members.map((member) => (
-                  <label key={member.user_id} className="flex items-center gap-2 text-xs text-slate-200">
+                  <label key={member.user_id} className="flex items-center gap-2 text-xs text-slate-700">
                     <input
                       type="checkbox"
                       checked={selectedAssignees.includes(member.user_id)}
