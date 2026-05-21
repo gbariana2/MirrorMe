@@ -401,7 +401,7 @@ export function PoseAnalysisPanel({
   const [syncDiagnostics, setSyncDiagnostics] = useState<SyncDiagnostics>(null);
   const scoreTone =
     score === null
-      ? "text-slate-200"
+      ? "text-slate-700"
       : score >= 85
         ? "text-emerald-300"
         : score >= 70
@@ -584,12 +584,12 @@ export function PoseAnalysisPanel({
         </div>
         <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Sampling window</p>
-          <p className="mt-2 text-sm font-medium text-slate-200">Entire clip, every 0.5s</p>
+          <p className="mt-2 text-sm font-medium text-slate-900">Entire clip, every 0.5s</p>
         </div>
       </div>
 
       {summary ? (
-        <div className="mt-6 rounded-2xl border border-emerald-300/35 bg-emerald-500/10 px-4 py-4 text-sm leading-6 text-emerald-200">
+        <div className="mt-6 rounded-2xl border border-emerald-300/70 bg-emerald-100 px-4 py-4 text-sm leading-6 text-emerald-900">
           {summary}
         </div>
       ) : null}
@@ -597,7 +597,7 @@ export function PoseAnalysisPanel({
       {syncDiagnostics ? (
         <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Sync diagnostics</p>
-          <p className="mt-2 text-sm text-slate-200">
+          <p className="mt-2 text-sm text-slate-900">
             Selected offset: {formatOffsetMs(syncDiagnostics.selectedOffsetMs)} | Method: {syncDiagnostics.method.replace("_", " ")} | Confidence: {Math.round(syncDiagnostics.confidence * 100)}%
           </p>
           <div className="mt-3 space-y-2">
@@ -611,7 +611,7 @@ export function PoseAnalysisPanel({
       ) : null}
 
       {error ? (
-        <div className="mt-6 rounded-2xl border border-rose-400/40 bg-rose-500/15 px-4 py-4 text-sm leading-6 text-rose-200">
+        <div className="mt-6 rounded-2xl border border-rose-300/70 bg-rose-100 px-4 py-4 text-sm leading-6 text-rose-900">
           {error}
         </div>
       ) : null}

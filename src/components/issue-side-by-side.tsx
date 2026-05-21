@@ -416,7 +416,7 @@ export function IssueSideBySide({
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
               severityFilter === filter
                 ? "bg-[#ff7f5f] text-slate-950"
-                : "border border-white/25 bg-transparent text-slate-700"
+                : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
             }`}
           >
             {filter === "all" ? "All" : filter === "major" ? "Major" : "Minor"}
@@ -425,7 +425,7 @@ export function IssueSideBySide({
       </div>
 
       {filteredIssues.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-white/25 bg-[#fff6ef] p-5 text-sm text-slate-700">
+        <div className="mt-5 rounded-2xl border border-dashed border-[#decfbe] bg-[#fff6ef] p-5 text-sm text-slate-700">
           No {severityFilter === "all" ? "major or minor" : severityFilter} mismatches were flagged.
         </div>
       ) : (
@@ -454,7 +454,7 @@ export function IssueSideBySide({
                 {issue.notes ? <p className="mt-2 text-sm text-slate-700">{issue.notes}</p> : null}
 
                 {isExpanded ? (
-                  <div className="mt-4 rounded-xl border border-[#e8dccf] bg-[#101625] p-3">
+                  <div className="mt-4 rounded-xl border border-[#e8dccf] bg-[#fffaf5] p-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
                       Side-by-side at {formatTimestampMs(issue.timestampMs)}
                     </p>
@@ -464,8 +464,8 @@ export function IssueSideBySide({
                     {isFrameLoading ? <p className="mt-2 text-xs text-slate-700">Loading image comparison...</p> : null}
                     {frameError ? <p className="mt-2 text-xs text-rose-300">{frameError}</p> : null}
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <canvas ref={referenceCanvasRef} className="w-full rounded-lg bg-[#0a1020]" />
-                      <canvas ref={submissionCanvasRef} className="w-full rounded-lg bg-[#0a1020]" />
+                      <canvas ref={referenceCanvasRef} className="w-full rounded-lg bg-[#fff1e7]" />
+                      <canvas ref={submissionCanvasRef} className="w-full rounded-lg bg-[#fff1e7]" />
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -474,7 +474,7 @@ export function IssueSideBySide({
                         onClick={() => {
                           void toggleSyncPlayback();
                         }}
-                        className="rounded-full border border-white/25 px-3 py-1 text-xs font-semibold text-slate-200"
+                        className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-1 text-xs font-semibold text-slate-700"
                       >
                         {syncPlaying ? "Pause both" : "Play both (synced)"}
                       </button>

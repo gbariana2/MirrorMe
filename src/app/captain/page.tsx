@@ -708,7 +708,7 @@ export default function CaptainPage() {
               <button
                 type="button"
                 onClick={() => setIsAdminToolsOpen((current) => !current)}
-                className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200"
+                className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-1 text-[11px] font-semibold text-slate-700"
               >
                 {isAdminToolsOpen ? "Hide" : "Show"}
               </button>
@@ -723,7 +723,7 @@ export default function CaptainPage() {
                       void loadHealth();
                     }}
                     disabled={isHealthLoading}
-                    className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                    className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-1 text-[11px] font-semibold text-slate-700 disabled:opacity-50"
                   >
                     {isHealthLoading ? "Checking..." : "Refresh"}
                   </button>
@@ -733,7 +733,7 @@ export default function CaptainPage() {
                       void runSetupFix();
                     }}
                     disabled={isBootstrapRunning}
-                    className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                    className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-1 text-[11px] font-semibold text-slate-700 disabled:opacity-50"
                   >
                     {isBootstrapRunning ? "Running setup..." : "Run setup fix"}
                   </button>
@@ -743,7 +743,7 @@ export default function CaptainPage() {
                       void runDurationBackfill();
                     }}
                     disabled={isBackfillRunning}
-                    className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold text-slate-200 disabled:opacity-50"
+                    className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-1 text-[11px] font-semibold text-slate-700 disabled:opacity-50"
                   >
                     {isBackfillRunning ? "Backfilling..." : "Backfill durations"}
                   </button>
@@ -753,7 +753,7 @@ export default function CaptainPage() {
                   { label: "Storage", value: health.checks.storage },
                   { label: "Worker secret", value: health.checks.analysisWorkerSecret },
                 ].map((check) => (
-                  <div key={check.label} className="rounded-lg border border-white/10 bg-[#171c2f] px-3 py-2">
+                  <div key={check.label} className="rounded-lg border border-[#e8dccf] bg-[#fff6ef] px-3 py-2">
                     <p className="text-xs font-semibold text-slate-900">
                       {check.label}{" "}
                       <span
@@ -816,7 +816,7 @@ export default function CaptainPage() {
             />
             <button
               type="submit"
-              className="rounded-full border border-white/25 px-4 py-2 text-xs font-semibold text-slate-200"
+              className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-4 py-2 text-xs font-semibold text-slate-700"
             >
               Save display name
             </button>
@@ -830,7 +830,7 @@ export default function CaptainPage() {
                 onClick={() => setSelectedTeamId(item.team.id)}
                 className={`rounded-xl border px-4 py-3 text-left ${
                   selectedTeamId === item.team.id
-                    ? "border-[#8fd4ff] bg-[#1a2037]"
+                    ? "border-[#8fd4ff] bg-[#fff1e7]"
                     : "border-[#e8dccf] bg-[#fffaf5]"
                 }`}
               >
@@ -843,7 +843,7 @@ export default function CaptainPage() {
                       event.stopPropagation();
                       void copyJoinCode(item.team.join_code);
                     }}
-                    className="rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
+                    className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-2 py-0.5 text-[10px] font-semibold text-slate-700"
                   >
                     {copiedKey === `code:${item.team.join_code}` ? "Copied" : "Copy code"}
                   </button>
@@ -853,7 +853,7 @@ export default function CaptainPage() {
                       event.stopPropagation();
                       void copyInviteLink(item.team.join_code);
                     }}
-                    className="rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold text-slate-200"
+                    className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-2 py-0.5 text-[10px] font-semibold text-slate-700"
                   >
                     {copiedKey === `invite:${item.team.join_code}` ? "Copied" : "Copy invite link"}
                   </button>
@@ -1020,7 +1020,7 @@ export default function CaptainPage() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentFilter === "active"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 }`}
               >
                 Active
@@ -1031,7 +1031,7 @@ export default function CaptainPage() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentFilter === "archived"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 }`}
               >
                 Archived
@@ -1042,7 +1042,7 @@ export default function CaptainPage() {
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   assignmentFilter === "all"
                     ? "bg-[#ff7f5f] text-slate-950"
-                    : "border border-white/25 text-slate-700"
+                    : "border border-[#decfbe] bg-[#fffaf5] text-slate-700"
                 }`}
               >
                 All

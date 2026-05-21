@@ -319,7 +319,7 @@ export function FullPlaybackComparison({ analysisId, referenceVideoUrl, submissi
               onClick={() => {
                 void toggleSyncedPlayback();
               }}
-              className="rounded-full border border-white/25 px-3 py-1 text-xs font-semibold text-slate-200"
+              className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-3 py-1 text-xs font-semibold text-slate-700"
             >
               {isSyncedPlaying ? "Pause Both" : "Play Both (Synced)"}
             </button>

@@ -449,7 +449,7 @@ function DancerDashboard() {
                         [assignment.id]: event.target.files?.[0] ?? null,
                       }))
                     }
-                    className="w-full rounded-xl border border-[#decfbe] bg-[#171c2f] px-3 py-2 text-xs outline-none"
+                    className="w-full rounded-xl border border-[#decfbe] bg-[#fffaf5] px-3 py-2 text-xs text-slate-700 outline-none file:mr-2 file:rounded-full file:border-0 file:bg-[#ff7f5f] file:px-2 file:py-1 file:font-semibold file:text-slate-950"
                   />
                   <button
                     type="button"

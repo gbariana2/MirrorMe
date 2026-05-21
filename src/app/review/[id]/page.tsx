@@ -129,7 +129,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
               </p>
             </div>
 
-            <div className="rounded-full border border-[#decfbe] bg-white/10 px-4 py-2 text-sm font-medium text-slate-200">
+            <div className="rounded-full border border-[#decfbe] bg-[#fff6ef] px-4 py-2 text-sm font-medium text-slate-900">
               Status: {analysis.status}
             </div>
           </div>
@@ -156,7 +156,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                 Created (UTC)
               </p>
-              <p className="mt-2 text-sm font-medium text-slate-200">
+              <p className="mt-2 text-sm font-medium text-slate-900">
                 {createdAtUtcDisplay}
               </p>
             </div>
@@ -176,7 +176,7 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
               </div>
               <Link
                 href="/compare"
-                className="rounded-full border border-white/25 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
+                className="rounded-full border border-[#decfbe] bg-[#fffaf5] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-[#fff1e7]"
               >
                 New comparison
               </Link>
@@ -221,15 +221,15 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
               Feedback Report
             </h2>
             <div className="mt-4 grid gap-3">
-              <div className="rounded-2xl border border-[#e8dccf] bg-white/5 p-4">
+              <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Status</p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">{analysis.status}</p>
               </div>
-              <div className="rounded-2xl border border-[#e8dccf] bg-white/5 p-4">
+              <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Completed (UTC)</p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">{completedAtUtcDisplay ?? "Not completed yet"}</p>
               </div>
-              <div className="rounded-2xl border border-[#e8dccf] bg-white/5 p-4">
+              <div className="rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Issue count</p>
                 <p className="mt-2 text-sm font-semibold text-slate-900">{issues.length}</p>
                 <p className="mt-1 text-xs text-slate-700">Major: {majorIssueCount} • Minor: {minorIssueCount}</p>
@@ -237,11 +237,11 @@ export default async function ReviewPage({ params, searchParams }: ReviewPagePro
             </div>
 
             {analysis.summary ? (
-              <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-white/5 p-4 text-sm leading-6 text-slate-700">
+              <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4 text-sm leading-6 text-slate-700">
                 {analysis.summary}
               </div>
             ) : (
-              <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-white/5 p-4 text-sm leading-6 text-slate-700">
+              <div className="mt-6 rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-4 text-sm leading-6 text-slate-700">
                 No generated summary yet.
               </div>
             )}

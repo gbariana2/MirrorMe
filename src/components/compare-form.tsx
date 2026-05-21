@@ -373,14 +373,14 @@ export function CompareForm() {
         </div>
 
         {error ? (
-          <div className="mt-6 rounded-2xl border border-rose-400/40 bg-rose-500/15 px-4 py-3 text-sm text-rose-200">
+          <div className="mt-6 rounded-2xl border border-rose-300/70 bg-rose-100 px-4 py-3 text-sm text-rose-900">
             {error}
           </div>
         ) : null}
 
         {progressLabel ? (
-          <div className="mt-6 rounded-2xl border border-[#decfbe] bg-white/5 px-4 py-3">
-            <p className="text-sm text-slate-200">{progressLabel}</p>
+          <div className="mt-6 rounded-2xl border border-[#decfbe] bg-[#fff6ef] px-4 py-3">
+            <p className="text-sm text-slate-900">{progressLabel}</p>
             {uploadPercent !== null ? (
               <>
                 <div className="mt-2 h-2 w-full rounded-full bg-white/15">
@@ -401,7 +401,7 @@ export function CompareForm() {
         ) : null}
 
         {success ? (
-          <div className="mt-6 rounded-2xl border border-emerald-300/35 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-200">
+          <div className="mt-6 rounded-2xl border border-emerald-300/70 bg-emerald-100 px-4 py-4 text-sm text-emerald-900">
             Analysis created. Review it at{" "}
             <Link className="font-semibold underline" href={success.reviewPath}>
               {success.reviewPath}
@@ -441,7 +441,7 @@ export function CompareForm() {
           <li>The project now has a real substrate for pose extraction and scoring.</li>
         </ul>
 
-        <div className="mt-8 rounded-2xl border border-[#e8dccf] bg-white/5 p-5">
+        <div className="mt-8 rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-5">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-700">
             Next after this
           </p>
