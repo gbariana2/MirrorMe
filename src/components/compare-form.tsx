@@ -323,8 +323,8 @@ export function CompareForm() {
             Start a comparison run
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700">
-            This first pass uploads both videos, stores them in Supabase, and creates
-            a real analysis record you can build the pose-comparison pipeline on top of.
+            Upload a reference and submission, store both assets, and generate a complete
+            analysis record for review.
           </p>
         </div>
 
@@ -429,27 +429,17 @@ export function CompareForm() {
 
       <aside className="rounded-[2rem] border border-[#e8dccf] soft-panel p-6 text-slate-900 shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d64f72]">
-          Current Scope
+          Analysis Pipeline
         </p>
         <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-slate-900">
-          What this step proves
+          How this run works
         </h2>
 
         <ul className="mt-6 space-y-3 text-sm leading-6 text-slate-700">
           <li>Both video assets can be stored in a durable bucket.</li>
           <li>A comparison job gets a stable database record and review URL.</li>
-          <li>The project now has a real substrate for pose extraction and scoring.</li>
+          <li>Pose analysis results are available for timestamped review feedback.</li>
         </ul>
-
-        <div className="mt-8 rounded-2xl border border-[#e8dccf] bg-[#fff6ef] p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-700">
-            Next after this
-          </p>
-          <p className="mt-3 text-sm leading-6 text-slate-700">
-            Add frame sampling and landmark extraction, then populate `analysis_frames`
-            and `analysis_issues` instead of leaving the job in a pending state.
-          </p>
-        </div>
       </aside>
     </div>
   );

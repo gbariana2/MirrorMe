@@ -553,7 +553,7 @@ export function PoseAnalysisPanel({
             Pose Analysis
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
-            Run the first MediaPipe comparison pass
+            Run MediaPipe comparison
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700">
             This samples the full duration of both videos at 0.5-second intervals, computes
